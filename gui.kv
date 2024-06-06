@@ -8,13 +8,14 @@
             size_hint_x: None
             width: '200dp'
             height: self.minimum_height
-            padding: [0, 10]
+            padding: [0, 0]
             spacing: 10
             pos_hint: {"center_x": .5, "center_y": .5}
 
             MDExtendedFabButton:
                 fab_state: "expand"
                 pos_hint: {"center_x": .5, "center_y": .5}
+                size_hint_x: 0.75
 
                 MDExtendedFabButtonIcon:
                     icon: "camera"
@@ -25,6 +26,7 @@
             MDExtendedFabButton:
                 fab_state: "expand"
                 pos_hint: {"center_x": .5, "center_y": .5}
+                size_hint_x: 0.75
 
                 MDExtendedFabButtonIcon:
                     icon: "record"
@@ -50,13 +52,17 @@
             size_hint_x: None
             width: '200dp'
             height: self.minimum_height
-            padding: [0, 10]
+            padding: [0, 0]
             spacing: 10
             pos_hint: {"center_x": .5, "center_y": .5}
 
             MDExtendedFabButton:
                 fab_state: "expand"
                 pos_hint: {"center_x": .5, "center_y": .5}
+                size_hint_x: 0.75
+#                on_enter: self.fab_state = "expand"
+#                on_leave: self.fab_state = "collapse"
+
 
                 MDExtendedFabButtonIcon:
                     icon: "palette"
@@ -67,6 +73,7 @@
             MDExtendedFabButton:
                 fab_state: "expand"
                 pos_hint: {"center_x": .5, "center_y": .5}
+                size_hint_x: 0.75
 
                 MDExtendedFabButtonIcon:
                     icon: "image"
@@ -77,6 +84,7 @@
             MDExtendedFabButton:
                 fab_state: "expand"
                 pos_hint: {"center_x": .5, "center_y": .5}
+                size_hint_x: 0.75
 
                 MDExtendedFabButtonIcon:
                     icon: "loupe"
@@ -87,6 +95,7 @@
             MDExtendedFabButton:
                 fab_state: "expand"
                 pos_hint: {"center_x": .5, "center_y": .5}
+                size_hint_x: 0.75
 
                 MDExtendedFabButtonIcon:
                     icon: "camera-iris"

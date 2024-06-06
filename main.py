@@ -16,6 +16,7 @@ class MainScreen(Screen):
 class StreamApp(MDApp):
 
     def build(self):
+        self.title = "Archer Link"
         self.screen = MainScreen()
 
         # Schedule the RTSP stream initialization
