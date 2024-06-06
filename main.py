@@ -30,7 +30,7 @@ class StreamApp(MDApp):
         self.center_column = self.screen.ids.center_column
         self.placeholder = self.screen.ids.placeholder
 
-        self.status("Initializing...")
+        asyncio.create_task(self.status("Initializing..."))
 
 
         self.tcp_client = TCPClient(
@@ -41,7 +41,6 @@ class StreamApp(MDApp):
         self.rtsp_stream_widget = RTSPStream(
             rtsp_url=RTSP_URI,
         )
-
 
         asyncio.create_task(self.init_tcp_socket())
         return self.screen
@@ -66,7 +65,6 @@ class StreamApp(MDApp):
         ffc_btn.bind(on_press=lambda x: asyncio.create_task(self.on_ffc_press()))
 
     async def init_tcp_socket(self):
-
 
         while True:
             while not self.tcp_client.sock_connected:
@@ -95,6 +93,8 @@ class StreamApp(MDApp):
                 )
             )
             # loop_task = asyncio.create_task(self.init_rtsp_stream())
+            # self.init_rtsp_stream()
+            # await self.init_rtsp_stream()
             while self.tcp_client.sock_connected:
                 res = await self.tcp_client.check_socket()
                 if res is False:
@@ -117,7 +117,10 @@ class StreamApp(MDApp):
 
     async def init_rtsp_stream(self):
         # run stream self.rtsp_stream_widget
-        ...
+        print("Prepare")
+        self.rtsp_stream_widget.prepare()
+        print("Start")
+        self.rtsp_stream_widget.start_stream()
 
     async def show_stream(self):
         self.center_column.remove_widget(self.placeholder)
@@ -144,7 +147,7 @@ if __name__ == '__main__':
         TCP_PORT = 8888
         WS_PORT = 8080
         WS_URI = f'ws://{TCP_IP}:{WS_PORT}/websocket'
-        RTSP_URI = f'rtsp://{TCP_IP}/stream0'
+        RTSP_URI = f'rtsp://{TCP_IP}:8554/stream'
     else:
         TCP_IP = '192.168.100.1'
         TCP_PORT = 8888

@@ -83,6 +83,11 @@ class RTSPStream(Image):
         # # Bind the size to update when the parent size changes
         # self.bind(size=self.update_texture_size, pos=self.update_texture_size)
 
+    def prepare(self):
+        Clock.schedule_interval(self.update_texture, 1.0 / 30)  # Schedule update_texture to run at 30 FPS
+        self.bind(size=self.update_texture_size, pos=self.update_texture_size)
+
+
     def start_stream(self):
         self.capture = cv2.VideoCapture(self.rtsp_url)
         Clock.schedule_interval(self.read_frame, 1.0 / 60)  # Schedule read_frame to run at 60 FPS
@@ -100,8 +105,8 @@ class RTSPStream(Image):
             print("Failed to get frame, retrying...")
             self.capture.release()
             self.capture = cv2.VideoCapture(self.rtsp_url)
-            if not self.capture.isOpened():
-                self.on_issue()
+            # if not self.capture.isOpened():
+            #     self.on_issue()
 
     def resize_frame(self, frame):
         # Get the dimensions of the widget
