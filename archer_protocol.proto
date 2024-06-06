@@ -1,0 +1,302 @@
+syntax = "proto3";
+
+package archer_protocol;
+
+message HostPayload {
+	HostProfile profile = 1;
+	HostDevStatus devStatus = 2;
+	CommandResponse response = 3;
+	Reticles reticles = 4;
+	FullProfileData allProfiles = 5;
+}
+
+message ClientPayload {
+	reserved 1;
+	reserved "profile";
+    ClientDevStatus devStatus = 2;
+    Command command = 3;
+    CommandResponse response = 4;
+}
+
+message CommandResponse {
+	oneof oneofCommandResponse {
+		StatusOk statusOk = 1;
+		StatusError statusErr = 2;
+	}
+}
+
+message Command
+{
+	oneof oneofCommand {
+		SetZoomLevel setZoom = 1;
+		SetColorScheme setPallette = 2;
+		SetAgcMode setAgc = 3;
+		SetDistance setDst = 4;
+		SetHoldoff setHoldoff = 5;
+		SetZeroing setZeroing = 6;
+		SetCompassOffset setMagOffset = 7;
+		SetAirTemp setAirTC = 8;
+		SetAirHumidity setAirHum = 9;
+		SetAirPressure setAirPress = 10;
+		SetPowderTemp setPowderTemp = 11;
+		SetWind setWind = 12;
+		ButtonPress buttonPress = 13;
+		TriggerCmd cmdTrigger = 14;
+		GetHostDevStatus getHostDevStatus = 15;
+		GetHostProfile getHostProfile = 16;
+		GetProfiles getAllProfiles = 17;
+		UpdateProfiles updateAllProfiles = 18;
+		GetReticles getReticles = 19;
+		UpdateReticles updateReticles = 20;
+	}
+}
+message GetProfiles
+{
+
+}
+message GetReticles{
+
+}
+message UpdateReticles{
+	Reticles data = 1;
+}
+message UpdateProfiles{
+	FullProfileData data = 1;
+}
+message StatusOk
+{
+	OkStatusCode code = 1;
+}
+
+message StatusError
+{
+	ErrorStatusCode code = 1;
+	string text = 2;
+}
+
+enum OkStatusCode {
+	UNKNOWN_OK_STATUS = 0;
+    SUCCESS = 1;
+}
+
+enum ErrorStatusCode {
+	UNKNOWN_ERROR_STATUS = 0;
+    FAILURE = 1;
+	INVALID_DATA = 2;
+}
+
+
+message SetZoomLevel {
+    Zoom zoomLevel = 1;
+}
+message SetColorScheme {
+    ColorScheme scheme = 1;
+}
+message GetHostDevStatus {
+}
+message GetHostProfile {
+}
+message SetAirTemp {
+	int32 temperature = 1; //[-100..100] C°
+}
+message SetPowderTemp {
+    int32 temperature = 1; //[-100..100] C°
+}
+message SetAirHumidity {
+    int32 humidity = 1; //[0..100]%
+}
+message SetAirPressure {
+	int32 pressure = 1; //[3000..12000] decaPascal
+}
+message SetWind {
+	int32 direction = 1; //[0..359] °
+	int32 speed = 2; //[0..200] deciMeter per second
+}
+message SetDistance {
+	int32 distance = 1; //deciMeter
+}
+message SetAgcMode {
+	AGCMode mode = 1;
+}
+message SetCompassOffset {
+	int32 offset = 1;  //[-360..360] °
+}
+enum HoldoffType{
+	UNDEFINED = 0;
+	MIL = 1;
+	MOA = 2;
+	CLICKS = 3;
+}
+message SetHoldoff{
+	int32 x = 1; //x1000 125 increments [-600000..600000] 20500 = 20.5 1x; 41 2x; 61.5 3x etc.
+	int32 y = 2; //x1000 125 increments [-600000..600000]
+	HoldoffType type = 3;
+}
+message ButtonPress{
+	ButtonEnum buttonPressed = 1;
+}
+message TriggerCmd{
+	CMDDirect cmd = 1;
+}
+message SetZeroing{
+	int32 x = 1; //x1000 125 increments [-600000..600000]
+	int32 y = 2; //x1000 125 increments [-600000..600000]
+}
+
+message HostDevStatus {
+    int32 charge = 1; // Represented as percentage
+	Zoom zoom = 2; // zoom multiplier
+	int32 airTemp = 3; //-100..100 C°
+	int32 airHum = 4;	//0..100%
+	int32 airPress = 5; //3000..12000 decaPascal
+	int32 powderTemp = 6; //-100..100 C°
+	int32 windDir = 7; //0..359 °
+	int32 windSpeed = 8; //0..200 deciMeter per second
+	int32 pitch = 9; //-90..90 °
+	int32 cant = 10; //-90..90 °
+	int32 distance = 11; //deciMeter
+	int32 currentProfile = 12; //profile index
+	ColorScheme colorScheme = 13;
+	AGCMode modAGC = 14;
+	Zoom maxZoom = 15;
+}
+
+message ClientDevStatus {
+}
+
+enum ColorScheme {
+	UNKNOWN_COLOR_SHEME = 0;
+    SEPIA = 1;
+    BLACK_HOT = 2;
+    WHITE_HOT = 3;
+}
+
+enum AGCMode {
+	UNKNOWN_AGC_MODE = 0;
+	AUTO_1 = 1;
+	AUTO_2 = 2;
+	AUTO_3 = 3;
+}
+
+enum Zoom {
+	UNKNOWN_ZOOM_LEVEL = 0;
+	ZOOM_X1 = 1;
+	ZOOM_X2 = 2;
+	ZOOM_X3 = 3;
+	ZOOM_X4 = 4;
+	ZOOM_X6 = 5;
+}
+
+enum ButtonEnum {
+	UNKNOWN_BUTTON = 0;
+	MENU_SHORT = 1;
+	MENU_LONG = 2;
+	UP_SHORT = 3;
+	UP_LONG = 4;
+	DOWN_SHORT = 5;
+	DOWN_LONG = 6;
+	LRF_SHORT = 7;
+	LRF_LONG = 8;
+	REC_SHORT = 9;
+	REC_LONG = 10;
+}
+
+enum CMDDirect {
+	UNKNOWN_CMD_DIRECTION = 0;
+	CALIBRATE_ACCEL_GYRO = 1;
+	LRF_MEASUREMENT = 2;
+	RESET_CM_CLICKS = 3;
+	TRIGGER_FFC = 4;
+}
+
+message CoefRow {
+	int32 bc_cd = 1;
+	int32 mv = 2;
+}
+
+enum DType {
+	VALUE = 0;
+	INDEX = 1;
+}
+
+message SwPos {
+	int32 c_idx = 1;
+	int32 reticle_idx = 2;
+	int32 zoom = 3;
+	int32 distance = 4;
+	DType distance_from = 5;
+}
+
+enum GType {
+	G1 = 0;
+	G7 = 1;
+	CUSTOM = 2;
+}
+
+enum TwistDir {
+	RIGHT = 0;
+	LEFT = 1;
+}
+
+message HostProfile {
+	string profile_name = 1;
+	string cartridge_name = 2;
+	string bullet_name = 3;
+	string short_name_top = 4;
+	string short_name_bot = 5;
+	string user_note = 6;
+	int32 zero_x = 7;
+	int32 zero_y = 8;
+	int32 sc_height = 9;
+	int32 r_twist = 10;
+	int32 c_muzzle_velocity = 11;
+	int32 c_zero_temperature = 12;
+	int32 c_t_coeff = 13;
+	int32 c_zero_distance_idx = 14;
+	int32 c_zero_air_temperature = 15;
+	int32 c_zero_air_pressure = 16;
+	int32 c_zero_air_humidity = 17;
+	int32 c_zero_w_pitch = 18;
+	int32 c_zero_p_temperature = 19;
+	int32 b_diameter = 20;
+	int32 b_weight = 21;
+	int32 b_length = 22;
+	TwistDir twist_dir = 23;
+	GType bc_type = 24;
+	repeated SwPos switches = 25;
+	repeated int32 distances = 26;
+	repeated CoefRow coef_rows = 27;
+	string caliber = 28;
+	string device_uuid = 29;
+}
+
+
+message ProfileList {
+	repeated ProfileListEntry profile_desc = 1;
+	int32 activeprofile = 2;
+}
+
+message ProfileListEntry {
+	string profile_name = 1;
+	string cartridge_name = 2;
+	string short_name_top = 3;
+	string short_name_bot = 4;
+	string file_path = 5;
+}
+
+message FullProfileData{
+	ProfileList table = 1;
+	repeated HostProfile profiles = 2;
+}
+message Reticle{
+	bytes data = 1;
+	string folder_name = 2;
+}
+
+message Reticles{
+	repeated Reticle rets = 1;
+}
+
+message Payload {
+	HostProfile profile = 1;
+}
