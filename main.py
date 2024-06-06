@@ -26,20 +26,31 @@ class StreamApp(MDApp):
         self.title = "Archer Link"
         self.screen = MainScreen()
         self.bind_ui()
-        # Schedule the RTSP stream initialization
-        # Clock.schedule_once(self.init_tcp_socket, 2)  # Adjust the delay as needed
-        # Clock.schedule_once(self.init_rtsp_stream, 2)  # Adjust the delay as needed
 
-        self.screen.ids.placeholder.text = "Initializing..."
-        # asyncio.create_task(self._inf_loop())
+        self.center_column = self.screen.ids.center_column
+        self.placeholder = self.screen.ids.placeholder
+
+        self.status("Initializing...")
+
+
+        self.tcp_client = TCPClient(
+            server_ip=TCP_IP,
+            server_port=TCP_PORT,
+            command='CMD_RTSP_TRANS_START',
+        )
+        self.rtsp_stream_widget = RTSPStream(
+            rtsp_url=RTSP_URI,
+        )
+
+
         asyncio.create_task(self.init_tcp_socket())
         return self.screen
 
-    async def _on_tcp_wait(self, *args):
+    async def _waiting_msg(self, msg):
         i = 0
-        where = f"Connecting to 192.168.100.1:8888"
+        where = f"Connecting to {TCP_IP}:{TCP_PORT}"
         while True:
-            self.screen.ids.placeholder.text = f"{where}\nWaiting for device" + "." * i + " " * (3-i)
+            await self.status(f"{where}\n{msg}" + "." * i + " " * (3-i))
             i += 1
             if i >= 4:
                 i = 0
@@ -56,50 +67,59 @@ class StreamApp(MDApp):
         ffc_btn.bind(on_press=lambda x: asyncio.create_task(self.on_ffc_press()))
 
     async def init_tcp_socket(self):
-        res = False
-        while not res:
-            loop_task = asyncio.create_task(self._on_tcp_wait())
-            self.tcp_client = TCPClient(
-                server_ip='192.168.100.1',
-                server_port=8888,
-                command='CMD_RTSP_TRANS_START',
-            )
-            # Start the TCP connection
-            res = await self.tcp_client.connect()
-            loop_task.cancel()
-            if not res:
-                self.screen.ids.placeholder.text = "Can't connect to device"
-                await asyncio.sleep(1)
-                self.screen.ids.placeholder.text = "Retrying..."
-                await asyncio.sleep(1)
+
+
+        while True:
+            while not self.tcp_client.sock_connected:
+                loop_task = asyncio.create_task(self._waiting_msg("Waiting for device"))
+
+                # Start the TCP connection
+                res = await self.tcp_client.connect()
+                loop_task.cancel()
+                if not res:
+                    await self.status("Can't connect to device")
+                    print("Can't connect to device")
+                    await asyncio.sleep(1)
+                    await self.status("Retrying...")
+                    print("Retrying...")
+                    await asyncio.sleep(1)
+
+            # loop_task = asyncio.create_task(self.init_rtsp_stream())
+            # while self.tcp_client.sock_connected:
+            #     res = await self.tcp_client.check_socket()
+            #     if res is False:
+            #         loop_task.cancel()
+
+    async def status(self, message):
+        self.placeholder.text = message
 
     async def on_zoom_press(self):
-        await control.send(control.change_zoom())
+        await control.change_zoom()
 
     async def on_agc_press(self):
-        await control.send(control.change_agc())
+        await control.change_agc()
 
     async def on_color_press(self):
-        await control.send(control.change_color_scheme())
+        await control.change_color_scheme()
 
     async def on_ffc_press(self):
-        await control.send(control.send_trigger_ffc_command())
+        await control.send_trigger_ffc_command()
 
-    # def init_rtsp_stream(self, dt):
-    #
-    #     self.rtsp_stream_widget = RTSPStream(
-    #         rtsp_url='rtsp://192.168.100.1/stream0',
-    #         tcp_client=self.tcp_client,
-    #     )
-    #
-    #     self.center_column = self.screen.ids.center_column
-    #     self.placeholder = self.screen.ids.placeholder
-    #     self.center_column.remove_widget(self.placeholder)
-    #     self.center_column.add_widget(self.rtsp_stream_widget)
-    #
-    # def on_stop(self):
-    #     if hasattr(self, 'rtsp_stream_widget'):
-    #         self.rtsp_stream_widget.on_close()
+    async def init_rtsp_stream(self):
+        # run stream self.rtsp_stream_widget
+        ...
+
+    async def show_stream(self):
+        self.center_column.remove_widget(self.placeholder)
+        self.center_column.add_widget(self.rtsp_stream_widget)
+
+    async def hide_stream(self):
+        self.center_column.remove_widget(self.rtsp_stream_widget)
+        self.center_column.add_widget(self.placeholder)
+
+    def on_stop(self):
+        if hasattr(self, 'rtsp_stream_widget'):
+            self.rtsp_stream_widget.on_close()
 
 
 async def main():
@@ -108,4 +128,12 @@ async def main():
 
 
 if __name__ == '__main__':
+    TCP_IP = '192.168.100.1'
+    TCP_PORT = 8888
+    WS_PORT = 8080
+    WS_URI = f'ws://{TCP_IP}:{WS_PORT}/websocket'
+    RTSP_URI = f'rtsp://{TCP_IP}/stream0'
+
+    control.set_uri(WS_URI)
+
     asyncio.run(main())

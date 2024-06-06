@@ -77,10 +77,11 @@ class RTSPStream(Image):
         self.texture = None
         self.capture = None
 
-        Clock.schedule_interval(self.update_texture, 1.0 / 30)  # Schedule update_texture to run at 30 FPS
-
-        # Bind the size to update when the parent size changes
-        self.bind(size=self.update_texture_size, pos=self.update_texture_size)
+        # # TODO: split init and stream control
+        # Clock.schedule_interval(self.update_texture, 1.0 / 30)  # Schedule update_texture to run at 30 FPS
+        #
+        # # Bind the size to update when the parent size changes
+        # self.bind(size=self.update_texture_size, pos=self.update_texture_size)
 
     def start_stream(self):
         self.capture = cv2.VideoCapture(self.rtsp_url)

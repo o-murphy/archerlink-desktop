@@ -10,15 +10,18 @@ logging.getLogger('websockets').setLevel(logging.WARNING)
 # WS = "ws://stream.trailcam.link:8080/websocket"
 WS = "ws://192.168.100.1:8080/websocket"
 
+def set_uri(uri: str):
+    global WS
+    WS = uri
 
 # Define zoom levels
-zoom_levels = [archer_protocol_pb2.ZOOM_X1, archer_protocol_pb2.ZOOM_X2, archer_protocol_pb2.ZOOM_X3, archer_protocol_pb2.ZOOM_X4, archer_protocol_pb2.ZOOM_X6]
+zoom_levels = [archer_protocol_pb2.ZOOM_X1, archer_protocol_pb2.ZOOM_X2, archer_protocol_pb2.ZOOM_X3,
+               archer_protocol_pb2.ZOOM_X4, archer_protocol_pb2.ZOOM_X6]
 zoom_cur = zoom_levels[0]
 
 # Define AGC modes
 agc_modes = [archer_protocol_pb2.AUTO_1, archer_protocol_pb2.AUTO_2, archer_protocol_pb2.AUTO_3]
 agc_cur = agc_modes[0]
-
 
 # Define available color schemes
 color_schemes = [
@@ -29,7 +32,10 @@ color_schemes = [
 color_cur = color_schemes[0]
 
 
-def change_color_scheme():
+async def get_current_dev_status():
+    raise NotImplementedError
+
+async def change_color_scheme():
     global color_cur
     idx = color_schemes.index(color_cur)
 
@@ -37,6 +43,8 @@ def change_color_scheme():
         color_cur = color_schemes[idx + 1]
     else:
         color_cur = color_schemes[0]
+
+    print("Scheme: ", color_cur)
 
     # Create a SetColorScheme message
     set_color = archer_protocol_pb2.SetColorScheme(scheme=color_cur)
@@ -50,10 +58,11 @@ def change_color_scheme():
     client_payload.command.CopyFrom(command)
 
     # Serialize the ClientPayload message to a binary string
-    return client_payload.SerializeToString()
+    payload = client_payload.SerializeToString()
+    await send(payload)
 
 
-def change_agc():
+async def change_agc():
     global agc_cur
     idx = agc_modes.index(agc_cur)
 
@@ -61,6 +70,8 @@ def change_agc():
         agc_cur = agc_modes[idx + 1]
     else:
         agc_cur = agc_modes[0]
+
+    print("AGC: ", agc_cur)
 
     # Create a SetAgcMode message
     set_agc = archer_protocol_pb2.SetAgcMode(mode=agc_cur)
@@ -74,10 +85,10 @@ def change_agc():
     client_payload.command.CopyFrom(command)
 
     # Serialize the ClientPayload message to a binary string
-    return client_payload.SerializeToString()
+    payload = client_payload.SerializeToString()
+    await send(payload)
 
-
-def change_zoom():
+async def change_zoom():
     global zoom_cur
     idx = zoom_levels.index(zoom_cur)
 
@@ -99,10 +110,11 @@ def change_zoom():
     client_payload.command.CopyFrom(command)
 
     # Serialize the ClientPayload message to a binary string
-    return client_payload.SerializeToString()
+    payload = client_payload.SerializeToString()
+    await send(payload)
 
 
-def send_trigger_ffc_command():
+async def send_trigger_ffc_command():
     # Create a TriggerCmd message with the TRIGGER_FFC command
     trigger_cmd = archer_protocol_pb2.TriggerCmd(cmd=archer_protocol_pb2.TRIGGER_FFC)
 
@@ -115,7 +127,8 @@ def send_trigger_ffc_command():
     client_payload.command.CopyFrom(command)
 
     # Serialize the ClientPayload message to a binary string
-    return client_payload.SerializeToString()
+    payload = client_payload.SerializeToString()
+    await send(payload)
 
 
 async def send(payload):
