@@ -70,23 +70,14 @@ from tcp_client import TCPClient
 
 
 class RTSPStream(Image):
-    def __init__(self, rtsp_url, tcp_client: TCPClient, on_issue, **kwargs):
+    def __init__(self, rtsp_url, **kwargs):
         super().__init__(**kwargs)
         self.rtsp_url = rtsp_url
         self.frame = None
         self.texture = None
         self.capture = None
-        self.tcp_client = tcp_client
-        self.on_issue = on_issue
-
-        # Start the TCP connection
-        self.tcp_client.connect()
-
-        # Initialize the RTSP stream
-        self.start_stream()
 
         Clock.schedule_interval(self.update_texture, 1.0 / 30)  # Schedule update_texture to run at 30 FPS
-        Clock.schedule_interval(self.check_socket, 1.0 / 5)  # Schedule check_socket to run at 10 FPS
 
         # Bind the size to update when the parent size changes
         self.bind(size=self.update_texture_size, pos=self.update_texture_size)

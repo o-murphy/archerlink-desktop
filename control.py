@@ -86,7 +86,7 @@ def change_zoom():
     else:
         zoom_cur = zoom_levels[0]
 
-    # print("Zoom: ", zoom_cur)
+    print("Zoom: ", zoom_cur)
     # Create a SetZoomLevel message
     set_zoom = archer_protocol_pb2.SetZoomLevel(zoomLevel=zoom_cur)
 
