@@ -48,9 +48,8 @@ class StreamApp(MDApp):
 
     async def _waiting_msg(self, msg):
         i = 0
-        where = f"Connecting to {TCP_IP}:{TCP_PORT}"
         while True:
-            await self.status(f"{where}\n{msg}" + "." * i + " " * (3-i))
+            await self.status(f"{msg}" + "." * i + " " * (3-i))
             i += 1
             if i >= 4:
                 i = 0
@@ -71,11 +70,15 @@ class StreamApp(MDApp):
 
         while True:
             while not self.tcp_client.sock_connected:
-                loop_task = asyncio.create_task(self._waiting_msg("Waiting for device"))
+                status_task = asyncio.create_task(
+                    self._waiting_msg(
+                        f"Connecting to {TCP_IP}:{TCP_PORT}\nWaiting for device"
+                    )
+                )
 
                 # Start the TCP connection
                 res = await self.tcp_client.connect()
-                loop_task.cancel()
+                status_task.cancel()
                 if not res:
                     await self.status("Can't connect to device")
                     print("Can't connect to device")
@@ -84,11 +87,18 @@ class StreamApp(MDApp):
                     print("Retrying...")
                     await asyncio.sleep(1)
 
+            await self.status("Connected\nRunning RTSP stream...")
+
+            status_task = asyncio.create_task(
+                self._waiting_msg(
+                    f"{RTSP_URI}\nStarting RTSP"
+                )
+            )
             # loop_task = asyncio.create_task(self.init_rtsp_stream())
-            # while self.tcp_client.sock_connected:
-            #     res = await self.tcp_client.check_socket()
-            #     if res is False:
-            #         loop_task.cancel()
+            while self.tcp_client.sock_connected:
+                res = await self.tcp_client.check_socket()
+                if res is False:
+                    status_task.cancel()
 
     async def status(self, message):
         self.placeholder.text = message
@@ -128,11 +138,19 @@ async def main():
 
 
 if __name__ == '__main__':
-    TCP_IP = '192.168.100.1'
-    TCP_PORT = 8888
-    WS_PORT = 8080
-    WS_URI = f'ws://{TCP_IP}:{WS_PORT}/websocket'
-    RTSP_URI = f'rtsp://{TCP_IP}/stream0'
+    DEBUG = True
+    if DEBUG:
+        TCP_IP = '127.0.0.1'
+        TCP_PORT = 8888
+        WS_PORT = 8080
+        WS_URI = f'ws://{TCP_IP}:{WS_PORT}/websocket'
+        RTSP_URI = f'rtsp://{TCP_IP}/stream0'
+    else:
+        TCP_IP = '192.168.100.1'
+        TCP_PORT = 8888
+        WS_PORT = 8080
+        WS_URI = f'ws://{TCP_IP}:{WS_PORT}/websocket'
+        RTSP_URI = f'rtsp://{TCP_IP}/stream0'
 
     control.set_uri(WS_URI)
 
