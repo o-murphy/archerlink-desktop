@@ -1,0 +1,95 @@
+<MainScreen>:
+    MDBoxLayout:
+        orientation: 'horizontal'
+
+        MDBoxLayout:
+            orientation: 'vertical'
+            size_hint_y: None
+            size_hint_x: None
+            width: '200dp'
+            height: self.minimum_height
+            padding: [0, 10]
+            spacing: 10
+            pos_hint: {"center_x": .5, "center_y": .5}
+
+            MDExtendedFabButton:
+                fab_state: "expand"
+                pos_hint: {"center_x": .5, "center_y": .5}
+
+                MDExtendedFabButtonIcon:
+                    icon: "camera"
+
+                MDExtendedFabButtonText:
+                    text: "Shot"
+
+            MDExtendedFabButton:
+                fab_state: "expand"
+                pos_hint: {"center_x": .5, "center_y": .5}
+
+                MDExtendedFabButtonIcon:
+                    icon: "record"
+
+                MDExtendedFabButtonText:
+                    text: "Record"
+
+
+        MDBoxLayout:
+            id: center_column
+            orientation: 'vertical'
+            size_hint_x: 1
+
+            MDLabel:
+                id: placeholder
+                text: "Trying to connect..."
+                halign: "center"
+                valign: "center"
+
+        MDBoxLayout:
+            orientation: 'vertical'
+            size_hint_y: None
+            size_hint_x: None
+            width: '200dp'
+            height: self.minimum_height
+            padding: [0, 10]
+            spacing: 10
+            pos_hint: {"center_x": .5, "center_y": .5}
+
+            MDExtendedFabButton:
+                fab_state: "expand"
+                pos_hint: {"center_x": .5, "center_y": .5}
+
+                MDExtendedFabButtonIcon:
+                    icon: "palette"
+
+                MDExtendedFabButtonText:
+                    text: "Color mode"
+
+            MDExtendedFabButton:
+                fab_state: "expand"
+                pos_hint: {"center_x": .5, "center_y": .5}
+
+                MDExtendedFabButtonIcon:
+                    icon: "image"
+
+                MDExtendedFabButtonText:
+                    text: "AGC Mode"
+
+            MDExtendedFabButton:
+                fab_state: "expand"
+                pos_hint: {"center_x": .5, "center_y": .5}
+
+                MDExtendedFabButtonIcon:
+                    icon: "loupe"
+
+                MDExtendedFabButtonText:
+                    text: "Zoom"
+
+            MDExtendedFabButton:
+                fab_state: "expand"
+                pos_hint: {"center_x": .5, "center_y": .5}
+
+                MDExtendedFabButtonIcon:
+                    icon: "camera-iris"
+
+                MDExtendedFabButtonText:
+                    text: "Calibration"
