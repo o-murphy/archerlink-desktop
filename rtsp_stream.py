@@ -1,112 +1,66 @@
-# import cv2
-# from kivy.uix.image import Image
-# from kivy.clock import Clock
-# from kivy.graphics.texture import Texture
-# from tcp_client import TCPClient
-#
-#
-# class RTSPStream(Image):
-#     def __init__(self, rtsp_url, tcp_client: TCPClient, on_issue, **kwargs):
-#         super().__init__(**kwargs)
-#         self.rtsp_url = rtsp_url
-#         self.frame = None
-#         self.texture = None
-#         self.capture = None
-#         self.tcp_client = tcp_client
-#         self.on_issue = on_issue
-#
-#         # Start the TCP connection
-#         self.tcp_client.connect()
-#
-#         # Initialize the RTSP stream
-#         self.start_stream()
-#
-#         Clock.schedule_interval(self.update_texture, 1.0 / 30)  # Schedule update_texture to run at 30 FPS
-#         Clock.schedule_interval(self.check_socket, 1.0 / 5)  # Schedule check_socket to run at 10 FPS
-#
-#     def start_stream(self):
-#         self.capture = cv2.VideoCapture(self.rtsp_url)
-#         Clock.schedule_interval(self.read_frame, 1.0 / 60)  # Schedule read_frame to run at 30 FPS
-#
-#     def read_frame(self, dt):
-#         ret, frame = self.capture.read()
-#         if ret:
-#             buf1 = cv2.flip(frame, 0)
-#             buf = buf1.tobytes()
-#             self.frame = (buf, frame.shape[1], frame.shape[0])
-#         else:
-#             print("Failed to get frame, retrying...")
-#             self.capture.release()
-#             self.capture = cv2.VideoCapture(self.rtsp_url)
-#             if not self.capture.isOpened():
-#                 self.on_issue()
-#
-#     def check_socket(self, dt):
-#         if not self.tcp_client.sock_connected:
-#             self.tcp_client.connect()
-#             return
-#
-#         # Check for any data from the TCP socket
-#         self.tcp_client.check_socket()
-#
-#     def update_texture(self, dt):
-#         if self.frame:
-#             buf, width, height = self.frame
-#             texture = Texture.create(size=(width, height), colorfmt='bgr')
-#             texture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
-#             self.texture = texture
-#
-#     def on_close(self):
-#         self.tcp_client.close()
-#         if self.capture:
-#             self.capture.release()
-
+import asyncio
 
 import cv2
+import numpy as np
+import time
 from kivy.uix.image import Image
-from kivy.clock import Clock
 from kivy.graphics.texture import Texture
-from tcp_client import TCPClient
+
+_fake_frame_init_value = time.time()
+
+
+def _create_fake_frame(h, w):
+    et = time.time() - _fake_frame_init_value
+    color = (0, 255, 0)
+    f = np.zeros((w, h, 3), dtype=np.uint8)
+    f[:] = color
+    tl = (int((et * 50) % w), int((et * 30) % h))
+    br = (tl[0] + 50, tl[1] + 50)
+    cv2.rectangle(f, tl, br, (0, 0, 255), -1)
+    return f
 
 
 class RTSPStream(Image):
-    def __init__(self, rtsp_url, **kwargs):
+    def __init__(self, rtsp_url, fake=False, **kwargs):
         super().__init__(**kwargs)
         self.rtsp_url = rtsp_url
         self.frame = None
         self.texture = None
         self.capture = None
+        self.fake = fake
 
-        # # TODO: split init and stream control
-        # Clock.schedule_interval(self.update_texture, 1.0 / 30)  # Schedule update_texture to run at 30 FPS
-        #
-        # # Bind the size to update when the parent size changes
-        # self.bind(size=self.update_texture_size, pos=self.update_texture_size)
-
-    def prepare(self):
-        Clock.schedule_interval(self.update_texture, 1.0 / 30)  # Schedule update_texture to run at 30 FPS
+    async def prepare(self):
         self.bind(size=self.update_texture_size, pos=self.update_texture_size)
+        while True:
+            await self.update_texture()
+            await asyncio.sleep(1 / 30)
 
+    async def start_stream(self):
+        while True:
+            await self.read_frame()
+            await asyncio.sleep(1 / 60)
 
-    def start_stream(self):
-        self.capture = cv2.VideoCapture(self.rtsp_url)
-        Clock.schedule_interval(self.read_frame, 1.0 / 60)  # Schedule read_frame to run at 60 FPS
-
-    def read_frame(self, dt):
-        ret, frame = self.capture.read()
-        if ret:
-            # Resize the frame to fit the widget's size
-            # frame = cv2.resize(frame, (int(self.width), int(self.height)))
-            frame = self.resize_frame(frame)
+    async def read_frame(self):
+        if self.fake:
+            frame = self.resize_frame(_create_fake_frame(640, 480))
             buf1 = cv2.flip(frame, 0)
             buf = buf1.tobytes()
             self.frame = (buf, frame.shape[1], frame.shape[0])
         else:
-            print("Failed to get frame, retrying...")
-            self.capture.release()
-            self.capture = cv2.VideoCapture(self.rtsp_url)
-            # if not self.capture.isOpened():
-            #     self.on_issue()
+            ret, frame = self.capture.read()
+            if ret:
+                # Resize the frame to fit the widget's size
+                # frame = cv2.resize(frame, (int(self.width), int(self.height)))
+                frame = self.resize_frame(frame)
+                buf1 = cv2.flip(frame, 0)
+                buf = buf1.tobytes()
+                self.frame = (buf, frame.shape[1], frame.shape[0])
+            else:
+                print("Failed to get frame, retrying...")
+                self.capture.release()
+                self.capture = cv2.VideoCapture(self.rtsp_url)
+                # if not self.capture.isOpened():
+                #     self.on_issue()
 
     def resize_frame(self, frame):
         # Get the dimensions of the widget
@@ -130,15 +84,7 @@ class RTSPStream(Image):
         resized_frame = cv2.resize(frame, (new_width, new_height))
         return resized_frame
 
-    def check_socket(self, dt):
-        if not self.tcp_client.sock_connected:
-            self.tcp_client.connect()
-            return
-
-        # Check for any data from the TCP socket
-        self.tcp_client.check_socket()
-
-    def update_texture(self, dt):
+    async def update_texture(self):
         if self.frame:
             buf, width, height = self.frame
             texture = Texture.create(size=(width, height), colorfmt='bgr')

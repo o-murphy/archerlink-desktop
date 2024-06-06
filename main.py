@@ -40,6 +40,7 @@ class StreamApp(MDApp):
         )
         self.rtsp_stream_widget = RTSPStream(
             rtsp_url=RTSP_URI,
+            fake=DEBUG
         )
 
         asyncio.create_task(self.init_tcp_socket())
@@ -94,11 +95,12 @@ class StreamApp(MDApp):
             )
             # loop_task = asyncio.create_task(self.init_rtsp_stream())
             # self.init_rtsp_stream()
-            # await self.init_rtsp_stream()
+            await self.init_rtsp_stream()
             while self.tcp_client.sock_connected:
                 res = await self.tcp_client.check_socket()
                 if res is False:
                     status_task.cancel()
+            await self.hide_stream()
 
     async def status(self, message):
         self.placeholder.text = message
@@ -118,9 +120,10 @@ class StreamApp(MDApp):
     async def init_rtsp_stream(self):
         # run stream self.rtsp_stream_widget
         print("Prepare")
-        self.rtsp_stream_widget.prepare()
+        asyncio.create_task(self.rtsp_stream_widget.prepare())
         print("Start")
-        self.rtsp_stream_widget.start_stream()
+        asyncio.create_task(self.rtsp_stream_widget.start_stream())
+        await self.show_stream()
 
     async def show_stream(self):
         self.center_column.remove_widget(self.placeholder)
