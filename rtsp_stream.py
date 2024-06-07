@@ -28,30 +28,34 @@ class RTSPStream(Image):
         self.texture = None
         self.capture = None
         self.fake = fake
+        self.fps = 60
 
-    async def prepare(self):
-        self.bind(size=self.update_texture_size, pos=self.update_texture_size)
+    async def texture_upd_loop(self):
         while True:
             await self.update_texture()
-            await asyncio.sleep(1 / 30)
+            await asyncio.sleep(1 / self.fps * 2)
 
     async def start_stream(self):
+        if not self.fake:
+            self.capture = cv2.VideoCapture(self.rtsp_url)
+            self.fps = self.capture.get(cv2.CAP_PROP_FPS)
+            print(f"Stream FPS: {self.fps}")
+        self.bind(size=self.update_texture_size, pos=self.update_texture_size)
+
+    async def stream_read(self):
         while True:
             await self.read_frame()
-            await asyncio.sleep(1 / 60)
+            await asyncio.sleep(1/self.fps)
 
     async def read_frame(self):
         if self.fake:
-            frame = self.resize_frame(_create_fake_frame(640, 480))
+            frame = _create_fake_frame(640, 480)
             buf1 = cv2.flip(frame, 0)
             buf = buf1.tobytes()
             self.frame = (buf, frame.shape[1], frame.shape[0])
         else:
             ret, frame = self.capture.read()
             if ret:
-                # Resize the frame to fit the widget's size
-                # frame = cv2.resize(frame, (int(self.width), int(self.height)))
-                frame = self.resize_frame(frame)
                 buf1 = cv2.flip(frame, 0)
                 buf = buf1.tobytes()
                 self.frame = (buf, frame.shape[1], frame.shape[0])
@@ -59,8 +63,6 @@ class RTSPStream(Image):
                 print("Failed to get frame, retrying...")
                 self.capture.release()
                 self.capture = cv2.VideoCapture(self.rtsp_url)
-                # if not self.capture.isOpened():
-                #     self.on_issue()
 
     def resize_frame(self, frame):
         # Get the dimensions of the widget
@@ -87,15 +89,24 @@ class RTSPStream(Image):
     async def update_texture(self):
         if self.frame:
             buf, width, height = self.frame
-            texture = Texture.create(size=(width, height), colorfmt='bgr')
-            texture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
+            frame = np.frombuffer(buf, dtype=np.uint8).reshape((height, width, 3))
+            resized_frame = self.resize_frame(frame)
+
+            resized_buf = resized_frame.tobytes()
+            texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='bgr')
+            texture.blit_buffer(resized_buf, colorfmt='bgr', bufferfmt='ubyte')
             self.texture = texture
             self.canvas.ask_update()
 
     def update_texture_size(self, *args):
         self.texture_size = self.size
 
+    def shot(self, filename):
+        if self.frame is not None:
+            buf, width, height = self.frame
+            image = np.frombuffer(buf, dtype=np.uint8).reshape((height, width, 3))
+            cv2.imwrite(filename, image)
+
     def on_close(self):
-        self.tcp_client.close()
         if self.capture:
             self.capture.release()
