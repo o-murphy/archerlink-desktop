@@ -1,10 +1,10 @@
 import asyncio
+import time
 
 import cv2
 import numpy as np
-import time
-from kivy.uix.image import Image
 from kivy.graphics.texture import Texture
+from kivy.uix.image import Image
 
 _fake_frame_init_value = time.time()
 
@@ -21,7 +21,7 @@ def _create_fake_frame(h, w):
 
 
 class RTSPStream(Image):
-    def __init__(self, rtsp_url, fake=False, **kwargs):
+    def __init__(self, rtsp_url, fake=False, on_conn_lost=None, **kwargs):
         super().__init__(**kwargs)
         self.rtsp_url = rtsp_url
         self.frame = None
@@ -29,6 +29,11 @@ class RTSPStream(Image):
         self.capture = None
         self.fake = fake
         self.fps = 60
+        self.initial_frames_to_skip = 60 * 3  # Number of initial frames to skip
+
+        self.stream_read_task = None
+        self.texture_task = None
+        self.on_conn_lost = on_conn_lost
 
     async def texture_upd_loop(self):
         while True:
@@ -40,12 +45,26 @@ class RTSPStream(Image):
             self.capture = cv2.VideoCapture(self.rtsp_url)
             self.fps = self.capture.get(cv2.CAP_PROP_FPS)
             print(f"Stream FPS: {self.fps}")
+            await self.warm_up_capture()
         self.bind(size=self.update_texture_size, pos=self.update_texture_size)
+        self.stream_read_task = asyncio.create_task(self.stream_read())
+        self.texture_task = asyncio.create_task(self.texture_upd_loop())
+
+    async def warm_up_capture(self):
+        # Read and discard a few initial frames to warm up the capture
+        for _ in range(self.initial_frames_to_skip):
+            if self.capture.isOpened():
+                ret, frame = self.capture.read()
+                if not ret:
+                    print("Failed to warm up the capture.")
+                    break
+                await asyncio.sleep(0.01)  # Small delay to simulate frame reading time
+        # _, self.frame = self.capture.read()
 
     async def stream_read(self):
         while True:
             await self.read_frame()
-            await asyncio.sleep(1/self.fps)
+            await asyncio.sleep(1 / self.fps)
 
     async def read_frame(self):
         if self.fake:
@@ -61,8 +80,17 @@ class RTSPStream(Image):
                 self.frame = (buf, frame.shape[1], frame.shape[0])
             else:
                 print("Failed to get frame, retrying...")
+                # if not self.capture.isOpened():
+                print("Not opened")
                 self.capture.release()
-                self.capture = cv2.VideoCapture(self.rtsp_url)
+                self.stream_read_task.cancel()
+                self.texture_task.cancel()
+                await self.on_conn_lost
+                # self.capture = None
+                # else:
+                #     print("Opened")
+                #     self.capture.release()
+                #     self.capture = cv2.VideoCapture(self.rtsp_url)
 
     def resize_frame(self, frame):
         # Get the dimensions of the widget

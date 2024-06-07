@@ -25,8 +25,10 @@ class TCPClient:
             # Send the command
             print(f"Sending: {self.command}")
             await asyncio.get_event_loop().sock_sendall(self.sock, self.command.encode())
-            resp = await asyncio.get_event_loop().sock_recv(self.sock, 1024)
 
+            # return True
+            resp = await asyncio.get_event_loop().sock_recv(self.sock, 1024)
+            print("Resp:", resp.decode())
             if resp.decode() == 'CMD_ACK_START_RTSP_LIVE':
                 self.sock_connected = True
                 print("Socket connected")

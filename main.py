@@ -49,13 +49,14 @@ class StreamApp(MDApp):
         )
         self.rtsp_stream_widget = RTSPStream(
             rtsp_url=RTSP_URI,
-            fake=DEBUG
+            fake=DEBUG,
+            on_conn_lost=self.conn_lost
         )
 
         self.watchdog_task = None
         self.tcp_socket_task = None
-        self.rtsp_texture_task = None
-        self.rtsp_capture_task = None
+        # self.rtsp_texture_task = None
+        # self.rtsp_capture_task = None
         self.rtsp_task = None
 
     async def watchdog(self):
@@ -82,12 +83,10 @@ class StreamApp(MDApp):
 
     async def rtsp_init(self):
         await self.rtsp_stream_widget.start_stream()
-        # print("RTSP started")
-        self.rtsp_capture_task = asyncio.create_task(self.rtsp_stream_widget.stream_read())
-        # print("RTSP stream loop")
-        self.rtsp_texture_task = asyncio.create_task(self.rtsp_stream_widget.texture_upd_loop())
-        # print("RTSP texture loop")
         self.appstate.rtsp = True
+
+    async def conn_lost(self):
+        self.appstate.rtsp = False
 
     def build(self):
         self.placeholder.color = "white"
@@ -143,7 +142,8 @@ class StreamApp(MDApp):
                 res = await self.tcp_client.check_socket()
                 # print("TCP res:", res)
                 if res is False:
-                    await asyncio.sleep(1 / 5)
+                    await asyncio.sleep(5)
+            # self.tcp_client.close()
 
     async def status(self, message):
         self.placeholder.text = message
