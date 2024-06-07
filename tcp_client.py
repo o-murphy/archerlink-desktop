@@ -35,6 +35,8 @@ class TCPClient:
                 return True
             print('Unexpected response')
             return False
+            # self.sock_connected = True
+            # return True
 
         except Exception as e:
             print(f"Failed to connect or send command: {e}")

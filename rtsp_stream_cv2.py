@@ -1,10 +1,14 @@
 import asyncio
+import os
 import time
 
 import cv2
 import numpy as np
+from kivy.clock import Clock
 from kivy.graphics.texture import Texture
 from kivy.uix.image import Image
+
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "timeout;5000"  # 5 seconds
 
 _fake_frame_init_value = time.time()
 
@@ -38,11 +42,13 @@ class RTSPStream(Image):
     async def texture_upd_loop(self):
         while True:
             await self.update_texture()
-            await asyncio.sleep(1 / self.fps * 2)
+            # await asyncio.sleep(1 / self.fps * 2)
+            await asyncio.sleep(Clock.get_fps())
 
     async def start_stream(self):
         if not self.fake:
             self.capture = cv2.VideoCapture(self.rtsp_url)
+            self.capture.setExceptionMode(True)
             self.fps = self.capture.get(cv2.CAP_PROP_FPS)
             print(f"Stream FPS: {self.fps}")
             await self.warm_up_capture()
@@ -79,18 +85,29 @@ class RTSPStream(Image):
                 buf = buf1.tobytes()
                 self.frame = (buf, frame.shape[1], frame.shape[0])
             else:
-                print("Failed to get frame, retrying...")
-                # if not self.capture.isOpened():
-                print("Not opened")
-                self.capture.release()
-                self.stream_read_task.cancel()
-                self.texture_task.cancel()
-                await self.on_conn_lost
-                # self.capture = None
-                # else:
-                #     print("Opened")
-                #     self.capture.release()
-                #     self.capture = cv2.VideoCapture(self.rtsp_url)
+                try:
+                    ret, frame = self.capture.read()
+                    if ret:
+                        buf1 = cv2.flip(frame, 0)
+                        buf = buf1.tobytes()
+                        self.frame = (buf, frame.shape[1], frame.shape[0])
+                    else:
+                        raise RuntimeError("Failed to get frame, retrying...")
+                except Exception as e:
+                    print(f"Error reading frame: {e}")
+                    await self.handle_stream_error()
+
+    async def handle_stream_error(self):
+        print("Stream error encountered. Attempting to reconnect...")
+        if self.capture.isOpened():
+            self.capture.release()
+        await asyncio.sleep(1)  # Wait for a second before retrying
+        self.capture = cv2.VideoCapture(self.rtsp_url)
+        self.capture.setExceptionMode(True)
+        if not self.capture.isOpened():
+            print("Failed to reconnect to the stream.")
+            if self.on_conn_lost:
+                await self.on_conn_lost()
 
     def resize_frame(self, frame):
         # Get the dimensions of the widget

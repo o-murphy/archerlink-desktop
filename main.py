@@ -3,6 +3,13 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 
+from kivy.config import Config
+from kivy.core.window import Window
+from kivy import platform
+if platform == 'win' or platform == 'linux':
+    Config.set('graphics', 'maxfps', '120')
+    Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
+
 from kivy.lang import Builder
 from kivy.metrics import dp
 from kivy.uix.screenmanager import Screen
@@ -10,11 +17,14 @@ from kivymd.app import MDApp
 from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 
 import control
-from rtsp_stream import RTSPStream
+from rtsp_stream_av import RTSPStream
 from tcp_client import TCPClient
+
 
 # import os
 # os.environ["KIVY_NO_CONSOLELOG"] = "1"
+
+
 
 Builder.load_file("gui.kv")
 
@@ -59,6 +69,11 @@ class StreamApp(MDApp):
         # self.rtsp_capture_task = None
         self.rtsp_task = None
 
+    # async def upd_framerate(self):
+    #     while True:
+    #         self.screen.ids.framerate.text = str(round(Clock.get_fps(), 2))
+    #         await asyncio.sleep(1/30)
+
     async def watchdog(self):
         await self.status("Initializing...")
         prev_state = AppState()
@@ -78,6 +93,7 @@ class StreamApp(MDApp):
 
     def on_start(self):
         self.bind_ui()
+        # asyncio.create_task(self.upd_framerate())
         self.watchdog_task = asyncio.create_task(self.watchdog())
         self.tcp_socket_task = asyncio.create_task(self.init_tcp_socket())
 
@@ -89,8 +105,57 @@ class StreamApp(MDApp):
         self.appstate.rtsp = False
 
     def build(self):
-        self.placeholder.color = "white"
+        self.theme_cls.theme_style = 'Dark'
+        self.theme_cls.material_style = "M3"
+        self.theme_cls.primary_palette = 'Khaki'
+        self.theme_cls.primary_hue = "600"
+        self.theme_cls.accent_palette = 'Teal'
+        self.theme_cls.accent_hue = "800"
+
+        # ['Aliceblue', 'Antiquewhite', 'Aqua', 'Aquamarine', 'Azure',
+        # 'Beige', 'Bisque', 'Black', 'Blanchedalmond', 'Blue', 'Blueviolet',
+        # 'Brown', 'Burlywood', 'Cadetblue', 'Chartreuse', 'Chocolate',
+        # 'Coral', 'Cornflowerblue', 'Cornsilk', 'Crimson', 'Cyan', 'Darkblue',
+        # 'Darkcyan', 'Darkgoldenrod', 'Darkgray', 'Darkgrey', 'Darkgreen', 'Darkkhaki',
+        # 'Darkmagenta', 'Darkolivegreen', 'Darkorange', 'Darkorchid', 'Darkred', 'Darksalmon',
+        # 'Darkseagreen', 'Darkslateblue', 'Darkslategray', 'Darkslategrey', 'Darkturquoise', 'Darkviolet',
+        # 'Deeppink', 'Deepskyblue', 'Dimgray', 'Dimgrey', 'Dodgerblue', 'Firebrick', 'Floralwhite',
+        # 'Forestgreen', 'Fuchsia', 'Gainsboro', 'Ghostwhite', 'Gold', 'Goldenrod', 'Gray',
+        # 'Grey', 'Green', 'Greenyellow', 'Honeydew', 'Hotpink', 'Indianred',
+        # 'Indigo', 'Ivory', 'Khaki', 'Lavender', 'Lavenderblush', 'Lawngreen',
+        # 'Lemonchiffon', 'Lightblue', 'Lightcoral', 'Lightcyan', 'Lightgoldenrodyellow',
+        # 'Lightgreen', 'Lightgray', 'Lightgrey', 'Lightpink', 'Lightsalmon', 'Lightseagreen',
+        # 'Lightskyblue', 'Lightslategray', 'Lightslategrey', 'Lightsteelblue', 'Lightyellow',
+        # 'Lime', 'Limegreen', 'Linen', 'Magenta', 'Maroon', 'Mediumaquamarine', 'Mediumblue',
+        # 'Mediumorchid', 'Mediumpurple', 'Mediumseagreen', 'Mediumslateblue', 'Mediumspringgreen',
+        # 'Mediumturquoise', 'Mediumvioletred', 'Midnightblue', 'Mintcream', 'Mistyrose',
+        # 'Moccasin', 'Navajowhite', 'Navy', 'Oldlace', 'Olive', 'Olivedrab', 'Orange', 'Orangered',
+        # 'Orchid', 'Palegoldenrod', 'Palegreen', 'Paleturquoise', 'Palevioletred', 'Papayawhip',
+        # 'Peachpuff', 'Peru', 'Pink', 'Plum', 'Powderblue', 'Purple', 'Red', 'Rosybrown',
+        # 'Royalblue', 'Saddlebrown', 'Salmon', 'Sandybrown', 'Seagreen', 'Seashell', 'Sienna', 'Silver', 'Skyblue', 'Slateblue', 'Slategray', 'Slategrey', 'Snow', 'Springgreen', 'Steelblue', 'Tan', 'Teal', 'Thistle', 'Tomato', 'Turquoise',
+        # 'Violet', 'Wheat', 'White', 'Whitesmoke', 'Yellow', 'Yellowgreen']
+
+        # self.placeholder.color = "white"
+        # self.screen.ids.framerate.color = "white"
+
+        Window.minimum_width = 700
+        Window.minimum_height = 400
+        # Set initial window size
+        Window.size = (700, 400)
+
+        # Bind the on_resize event to the handle_resize function
+        # Window.bind(on_resize=self.handle_resize)
         return self.screen
+
+    # def handle_resize(self, *args):
+    #     if Window.height > Window.width:
+    #         self.screen.ids.main_layout.orientation = 'vertical'
+    #         self.screen.ids.right_column.orientation = 'horizontal'
+    #         self.screen.ids.left_column.orientation = 'horizontal'
+    #     else:
+    #         self.screen.ids.main_layout.orientation = 'horizontal'
+    #         self.screen.ids.right_column.orientation = 'vertical'
+    #         self.screen.ids.left_column.orientation = 'vertical'
 
     async def _waiting_msg(self, msg):
         i = 0

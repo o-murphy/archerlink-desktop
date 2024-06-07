@@ -1,12 +1,17 @@
 <MainScreen>:
+
     MDBoxLayout:
+        id: main_layout
+        md_bg_color: self.theme_cls.backgroundColor
+
         orientation: 'horizontal'
 
         MDBoxLayout:
+            id: left_column
             orientation: 'vertical'
             size_hint_y: None
             size_hint_x: None
-            width: '200dp'
+#            width: '80dp'
             height: self.minimum_height
             padding: [0, 0]
             spacing: 10
@@ -14,9 +19,9 @@
 
             MDExtendedFabButton:
                 id: shot_btn
-                fab_state: "expand"
+                fab_state: "collapse"
                 pos_hint: {"center_x": .5, "center_y": .5}
-                size_hint_x: 0.75
+#                size_hint_x: 0.75
 
                 MDExtendedFabButtonIcon:
                     icon: "camera"
@@ -25,15 +30,23 @@
                     text: "Shot"
 
             MDExtendedFabButton:
-                fab_state: "expand"
+                fab_state: "collapse"
                 pos_hint: {"center_x": .5, "center_y": .5}
-                size_hint_x: 0.75
+#                size_hint_x: 0.75
 
                 MDExtendedFabButtonIcon:
                     icon: "record"
 
                 MDExtendedFabButtonText:
                     text: "Record"
+
+#            MDLabel:
+#                id: framerate
+#                text: "SAMPLE"
+#                color: "white"
+#                halign: "center"
+#                valign: "center"
+##                pos_hint: {"center_x": .5, "center_y": .5}
 
 
         MDBoxLayout:
@@ -49,10 +62,11 @@
                 valign: "center"
 
         MDBoxLayout:
+            id: right_column
             orientation: 'vertical'
             size_hint_y: None
             size_hint_x: None
-            width: '200dp'
+#            width: '80dp'
             height: self.minimum_height
             padding: [0, 0]
             spacing: 10
@@ -60,9 +74,9 @@
 
             MDExtendedFabButton:
                 id: color_btn
-                fab_state: "expand"
+                fab_state: "collapse"
                 pos_hint: {"center_x": .5, "center_y": .5}
-                size_hint_x: 0.75
+#                size_hint_x: 0.75
 #                on_enter: self.fab_state = "expand"
 #                on_leave: self.fab_state = "collapse"
 
@@ -75,9 +89,11 @@
 
             MDExtendedFabButton:
                 id: agc_btn
-                fab_state: "expand"
+                fab_state: "collapse"
                 pos_hint: {"center_x": .5, "center_y": .5}
-                size_hint_x: 0.75
+#                size_hint_x: 0.75
+#                on_enter: self.fab_state = "expand"
+#                on_leave: self.fab_state = "collapse"
 
                 MDExtendedFabButtonIcon:
                     icon: "image"
@@ -87,9 +103,11 @@
 
             MDExtendedFabButton:
                 id: zoom_btn
-                fab_state: "expand"
+                fab_state: "collapse"
                 pos_hint: {"center_x": .5, "center_y": .5}
-                size_hint_x: 0.75
+#                size_hint_x: 0.75
+#                on_enter: self.fab_state = "expand"
+#                on_leave: self.fab_state = "collapse"
 
                 MDExtendedFabButtonIcon:
                     icon: "loupe"
@@ -99,9 +117,11 @@
 
             MDExtendedFabButton:
                 id: ffc_btn
-                fab_state: "expand"
+                fab_state: "collapse"
                 pos_hint: {"center_x": .5, "center_y": .5}
-                size_hint_x: 0.75
+#                size_hint_x: 0.75
+#                on_enter: self.fab_state = "expand"
+#                on_leave: self.fab_state = "collapse"
 
                 MDExtendedFabButtonIcon:
                     icon: "camera-iris"
