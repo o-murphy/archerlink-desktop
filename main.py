@@ -56,7 +56,7 @@ class StreamApp(MDApp):
     async def watchdog(self):
         await self.status("Initializing...")
         while True:
-            # print(f"TCP connected: {self.tcp_client.sock_connected}, RTSP status: {self.rtsp.status}")
+            # print(f"TCP connected: {self.tcp.sock_connected}, RTSP status: {self.rtsp.status}")
 
             if self.tcp.sock_connected:
                 if self.rtsp.status != 'working' and not self.rtsp_task:
@@ -64,14 +64,20 @@ class StreamApp(MDApp):
                     self.rtsp_task = asyncio.create_task(self.start_stream())
                 elif self.rtsp.status == 'working':
                     await self.show_stream_widget()
+                elif self.rtsp.status != 'working' and self.rtsp_task:
+                    await self.on_stream_fallthrough()
+                    self.rtsp_task = None
+                else:
+                    print("Unexpected stream error")
+                    print(f"TCP connected: {self.tcp.sock_connected}, RTSP status: {self.rtsp.status}")
             else:
-                if self.rtsp.status == 'working':
-                    print("Stopping RTSP stream")
-                    await self.stop_stream()
-                await self.hide_stream_widget()
+                await self.on_stream_fallthrough()
+                # if self.rtsp.status == 'working':
+                #     print("Stopping RTSP stream")
+                #     await self.stop_stream()
+                # await self.hide_stream_widget()
 
             await asyncio.sleep(1 / 4)
-
 
     def on_start(self):
         self.bind_ui()
@@ -114,6 +120,12 @@ class StreamApp(MDApp):
             else:
                 print("No frame to update")
             await asyncio.sleep(1 / 30)
+
+    async def on_stream_fallthrough(self):
+        await self.stop_stream()
+        await self.hide_stream_widget()
+        await self.status("Loosing RTSP stream\ntrying to restart...")
+        await asyncio.sleep(1)
 
     async def start_stream(self):
         await self.rtsp.start()

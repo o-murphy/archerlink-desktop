@@ -36,6 +36,7 @@ class RTSPStreamer:
             cv2.imwrite(filename, self.frame)
 
     async def fake_stream(self):
+        until_err = 5
         try:
             self.fps = 60
             self.status = 'working'
@@ -43,6 +44,9 @@ class RTSPStreamer:
                 frame = _create_fake_frame(480, 640)
                 self.frame = frame
                 await asyncio.sleep(1 / self.fps)
+                until_err -= 1 / self.fps
+                if until_err <= 0:
+                    raise IOError("Simulate stream drop down")
             self.status = 'stopped'
         except Exception as e:
             self.status = f'error: {e}'
