@@ -82,7 +82,7 @@ class RTSPStream(Image):
         else:
             try:
                 for packet in self.container.demux():
-                    if packet.stream.type == 'video':
+                    if packet.image.type == 'video':
                         for frame in packet.decode():
                             img = frame.to_image()
                             frame = np.array(img)

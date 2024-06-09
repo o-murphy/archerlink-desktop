@@ -24,7 +24,7 @@ while True:
                     data = conn.recv(1024)
                     if not data:
                         break
-                    time.sleep(2)
+                    time.sleep(0.1)
                     # Process received data (here, we'll just print it)
                     print(f"Received: {data.decode()}")
                     if data.decode() == 'CMD_RTSP_TRANS_START':

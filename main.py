@@ -1,14 +1,20 @@
 import asyncio
 import os
-from dataclasses import dataclass
 from datetime import datetime
 
+import cv2
 from kivy.config import Config
-from kivy.core.window import Window
 from kivy import platform
+
+from rtsp import RTSPStreamer
+
 if platform == 'win' or platform == 'linux':
     Config.set('graphics', 'maxfps', '120')
     Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
+
+from kivy.core.window import Window
+from kivy.uix.image import Image
+from kivy.graphics.texture import Texture
 
 from kivy.lang import Builder
 from kivy.metrics import dp
@@ -17,92 +23,122 @@ from kivymd.app import MDApp
 from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 
 import control
-from rtsp_stream_av import RTSPStream
 from tcp_client import TCPClient
-
-
-# import os
-# os.environ["KIVY_NO_CONSOLELOG"] = "1"
-
-
 
 Builder.load_file("gui.kv")
 
-
-
-@dataclass
-class AppState:
-    tcp: bool = False
-    rtsp: bool = False
-    ws: bool = False
-
-
 class MainScreen(Screen):
     ...
-
 
 class StreamApp(MDApp):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.title = "Archer Link"
-        self.appstate = AppState()
         self.screen = MainScreen()
 
         self.center_column = self.screen.ids.center_column
         self.placeholder = self.screen.ids.placeholder
+        self.image = Image()
 
-        self.tcp_client = TCPClient(
+        self.tcp = TCPClient(
             server_ip=TCP_IP,
             server_port=TCP_PORT,
             command='CMD_RTSP_TRANS_START',
         )
-        self.rtsp_stream_widget = RTSPStream(
-            rtsp_url=RTSP_URI,
-            fake=DEBUG,
-            on_conn_lost=self.conn_lost
-        )
+        self.rtsp = RTSPStreamer(RTSP_URI, DEBUG)
 
         self.watchdog_task = None
         self.tcp_socket_task = None
-        # self.rtsp_texture_task = None
-        # self.rtsp_capture_task = None
+        self.texture_task = None
         self.rtsp_task = None
-
-    # async def upd_framerate(self):
-    #     while True:
-    #         self.screen.ids.framerate.text = str(round(Clock.get_fps(), 2))
-    #         await asyncio.sleep(1/30)
 
     async def watchdog(self):
         await self.status("Initializing...")
-        prev_state = AppState()
         while True:
-            if self.appstate != prev_state:
-                prev_state = AppState(*self.appstate.__dict__.values())
-                if self.appstate.tcp and self.appstate.rtsp:
+            # print(f"TCP connected: {self.tcp_client.sock_connected}, RTSP status: {self.rtsp.status}")
+
+            if self.tcp.sock_connected:
+                if self.rtsp.status != 'working' and not self.rtsp_task:
+                    print("Starting RTSP stream")
+                    self.rtsp_task = asyncio.create_task(self.start_stream())
+                elif self.rtsp.status == 'working':
                     await self.show_stream_widget()
-                elif self.appstate.tcp:
-                    self.rtsp_task = asyncio.create_task(self.rtsp_init())
-                    # await self.hide_stream_widget()
-                else:
-                    if self.rtsp_task is not None:
-                        self.rtsp_task.cancel()
-                    await self.hide_stream_widget()
+            else:
+                if self.rtsp.status == 'working':
+                    print("Stopping RTSP stream")
+                    await self.stop_stream()
+                await self.hide_stream_widget()
+
             await asyncio.sleep(1 / 4)
+
 
     def on_start(self):
         self.bind_ui()
-        # asyncio.create_task(self.upd_framerate())
         self.watchdog_task = asyncio.create_task(self.watchdog())
         self.tcp_socket_task = asyncio.create_task(self.init_tcp_socket())
 
-    async def rtsp_init(self):
-        await self.rtsp_stream_widget.start_stream()
-        self.appstate.rtsp = True
+    def resize_frame(self, frame):
+        # Get the dimensions of the widget
+        widget_width, widget_height = self.image.width, self.image.height
 
-    async def conn_lost(self):
-        self.appstate.rtsp = False
+        # Get the dimensions of the frame
+        frame_height, frame_width = frame.shape[:2]
+
+        # Calculate the aspect ratio of the frame
+        aspect_ratio = frame_width / frame_height
+
+        # Calculate the new dimensions while maintaining the aspect ratio
+        if widget_width / widget_height > aspect_ratio:
+            new_height = int(widget_height)
+            new_width = int(widget_height * aspect_ratio)
+        else:
+            new_width = int(widget_width)
+            new_height = int(widget_width / aspect_ratio)
+
+        # Resize the frame to the new dimensions
+        resized_frame = cv2.resize(frame, (new_width, new_height))
+        return resized_frame
+
+    async def update_texture(self):
+        while True:
+            if self.rtsp.frame is not None:
+                frame = self.rtsp.frame
+                resized_frame = self.resize_frame(frame)  # Resize frame to widget size
+                buf = resized_frame.tobytes()
+                texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='bgr')
+                texture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
+                self.image.texture = texture
+                self.image.canvas.ask_update()
+                # print("Texture updated")
+            else:
+                print("No frame to update")
+            await asyncio.sleep(1 / 30)
+
+    async def start_stream(self):
+        await self.rtsp.start()
+        self.texture_task = asyncio.create_task(self.update_texture())
+
+    async def stop_stream(self):
+        if self.rtsp_task:
+            self.rtsp_task.cancel()
+            self.rtsp_task = None
+        await self.rtsp.stop()
+        if self.texture_task:
+            self.texture_task.cancel()
+            self.texture_task = None
+
+    async def show_stream_widget(self):
+        if self.image not in self.center_column.children:
+            self.center_column.remove_widget(self.placeholder)
+            self.center_column.add_widget(self.image)
+        await asyncio.sleep(0)
+
+    async def hide_stream_widget(self):
+        if self.image in self.center_column.children:
+            self.center_column.remove_widget(self.image)
+            self.center_column.add_widget(self.placeholder)
+        await asyncio.sleep(0)
 
     def build(self):
         self.theme_cls.theme_style = 'Dark'
@@ -112,50 +148,10 @@ class StreamApp(MDApp):
         self.theme_cls.accent_palette = 'Teal'
         self.theme_cls.accent_hue = "800"
 
-        # ['Aliceblue', 'Antiquewhite', 'Aqua', 'Aquamarine', 'Azure',
-        # 'Beige', 'Bisque', 'Black', 'Blanchedalmond', 'Blue', 'Blueviolet',
-        # 'Brown', 'Burlywood', 'Cadetblue', 'Chartreuse', 'Chocolate',
-        # 'Coral', 'Cornflowerblue', 'Cornsilk', 'Crimson', 'Cyan', 'Darkblue',
-        # 'Darkcyan', 'Darkgoldenrod', 'Darkgray', 'Darkgrey', 'Darkgreen', 'Darkkhaki',
-        # 'Darkmagenta', 'Darkolivegreen', 'Darkorange', 'Darkorchid', 'Darkred', 'Darksalmon',
-        # 'Darkseagreen', 'Darkslateblue', 'Darkslategray', 'Darkslategrey', 'Darkturquoise', 'Darkviolet',
-        # 'Deeppink', 'Deepskyblue', 'Dimgray', 'Dimgrey', 'Dodgerblue', 'Firebrick', 'Floralwhite',
-        # 'Forestgreen', 'Fuchsia', 'Gainsboro', 'Ghostwhite', 'Gold', 'Goldenrod', 'Gray',
-        # 'Grey', 'Green', 'Greenyellow', 'Honeydew', 'Hotpink', 'Indianred',
-        # 'Indigo', 'Ivory', 'Khaki', 'Lavender', 'Lavenderblush', 'Lawngreen',
-        # 'Lemonchiffon', 'Lightblue', 'Lightcoral', 'Lightcyan', 'Lightgoldenrodyellow',
-        # 'Lightgreen', 'Lightgray', 'Lightgrey', 'Lightpink', 'Lightsalmon', 'Lightseagreen',
-        # 'Lightskyblue', 'Lightslategray', 'Lightslategrey', 'Lightsteelblue', 'Lightyellow',
-        # 'Lime', 'Limegreen', 'Linen', 'Magenta', 'Maroon', 'Mediumaquamarine', 'Mediumblue',
-        # 'Mediumorchid', 'Mediumpurple', 'Mediumseagreen', 'Mediumslateblue', 'Mediumspringgreen',
-        # 'Mediumturquoise', 'Mediumvioletred', 'Midnightblue', 'Mintcream', 'Mistyrose',
-        # 'Moccasin', 'Navajowhite', 'Navy', 'Oldlace', 'Olive', 'Olivedrab', 'Orange', 'Orangered',
-        # 'Orchid', 'Palegoldenrod', 'Palegreen', 'Paleturquoise', 'Palevioletred', 'Papayawhip',
-        # 'Peachpuff', 'Peru', 'Pink', 'Plum', 'Powderblue', 'Purple', 'Red', 'Rosybrown',
-        # 'Royalblue', 'Saddlebrown', 'Salmon', 'Sandybrown', 'Seagreen', 'Seashell', 'Sienna', 'Silver', 'Skyblue', 'Slateblue', 'Slategray', 'Slategrey', 'Snow', 'Springgreen', 'Steelblue', 'Tan', 'Teal', 'Thistle', 'Tomato', 'Turquoise',
-        # 'Violet', 'Wheat', 'White', 'Whitesmoke', 'Yellow', 'Yellowgreen']
-
-        # self.placeholder.color = "white"
-        # self.screen.ids.framerate.color = "white"
-
         Window.minimum_width = 700
         Window.minimum_height = 400
-        # Set initial window size
         Window.size = (700, 400)
-
-        # Bind the on_resize event to the handle_resize function
-        # Window.bind(on_resize=self.handle_resize)
         return self.screen
-
-    # def handle_resize(self, *args):
-    #     if Window.height > Window.width:
-    #         self.screen.ids.main_layout.orientation = 'vertical'
-    #         self.screen.ids.right_column.orientation = 'horizontal'
-    #         self.screen.ids.left_column.orientation = 'horizontal'
-    #     else:
-    #         self.screen.ids.main_layout.orientation = 'horizontal'
-    #         self.screen.ids.right_column.orientation = 'vertical'
-    #         self.screen.ids.left_column.orientation = 'vertical'
 
     async def _waiting_msg(self, msg):
         i = 0
@@ -179,36 +175,48 @@ class StreamApp(MDApp):
         ffc_btn.bind(on_press=lambda x: asyncio.create_task(self.on_ffc_press()))
         shot_btn.bind(on_press=lambda x: asyncio.create_task(self.on_shot_btn()))
 
-    async def init_tcp_socket(self):
 
+    async def init_tcp_socket(self):
         while True:
-            self.appstate.tcp = False
-            while not self.tcp_client.sock_connected:
+            while not self.tcp.sock_connected:
                 status_task = asyncio.create_task(
                     self._waiting_msg(
                         f"Connecting to {TCP_IP}:{TCP_PORT}\nWaiting for device"
                     )
                 )
-
-                # Start the TCP connection
-                res = await self.tcp_client.connect()
+                res = await self.tcp.connect()
                 status_task.cancel()
                 if not res:
                     await self.status("Can't connect to device")
-                    print("Can't connect to device")
                     await asyncio.sleep(1)
                     await self.status("Retrying...")
-                    print("Retrying...")
                     await asyncio.sleep(1)
 
-            self.appstate.tcp = True
-            while self.tcp_client.sock_connected:
-                # print("Check TCP")
-                res = await self.tcp_client.check_socket()
-                # print("TCP res:", res)
+            while self.tcp.sock_connected:
+                res = await self.tcp.check_socket()
                 if res is False:
                     await asyncio.sleep(5)
-            # self.tcp_client.close()
+
+    # async def init_tcp_socket(self):
+    #     while True:
+    #         while not self.tcp_client.sock_connected:
+    #             status_task = asyncio.create_task(
+    #                 self._waiting_msg(
+    #                     f"Connecting to {TCP_IP}:{TCP_PORT}\nWaiting for device"
+    #                 )
+    #             )
+    #             res = await self.tcp_client.connect()
+    #             status_task.cancel()
+    #             if not res:
+    #                 await self.status("Can't connect to device")
+    #                 await asyncio.sleep(1)
+    #                 await self.status("Retrying...")
+    #                 await asyncio.sleep(1)
+    #
+    #         while self.tcp_client.sock_connected:
+    #             res = await self.tcp_client.check_socket()
+    #             if res is False:
+    #                 await asyncio.sleep(5)
 
     async def status(self, message):
         self.placeholder.text = message
@@ -218,8 +226,8 @@ class StreamApp(MDApp):
         os.makedirs(outdir, exist_ok=True)
         dt = datetime.now().strftime("%y%m%d-%H%M%S")
         fname = os.path.join(outdir, f"{dt}.png")
-        if self.appstate.rtsp and self.appstate.tcp:
-            self.rtsp_stream_widget.shot(fname)
+        if self.rtsp.status == 'working' and self.tcp.sock_connected:
+            self.rtsp.shot(fname)
             await self.toast(f"Photo saved to\n{fname}")
 
     async def toast(self, text):
@@ -244,36 +252,26 @@ class StreamApp(MDApp):
     async def on_ffc_press(self):
         await control.send_trigger_ffc_command()
 
-    async def show_stream_widget(self):
-        self.center_column.remove_widget(self.placeholder)
-        self.center_column.add_widget(self.rtsp_stream_widget)
-
-    async def hide_stream_widget(self):
-        self.center_column.remove_widget(self.rtsp_stream_widget)
-        self.center_column.add_widget(self.placeholder)
-
     def on_stop(self):
         if self.tcp_socket_task is not None:
             self.tcp_socket_task.cancel()
-        if self.rtsp_task is not None:
-            self.rtsp_task.cancel()
-        self.tcp_client.close()
-        self.rtsp_stream_widget.on_close()
+        if self.rtsp._task is not None:
+            self.rtsp._task.cancel()
+        self.tcp.close()
 
 
 async def main():
     app = StreamApp()
     await app.async_run()
 
-
 if __name__ == '__main__':
-    DEBUG = False
+    DEBUG = True
     if DEBUG:
         TCP_IP = '127.0.0.1'
         TCP_PORT = 8888
         WS_PORT = 8080
         WS_URI = f'ws://{TCP_IP}:{WS_PORT}/websocket'
-        RTSP_URI = f'rtsp://{TCP_IP}:8554/stream'
+        RTSP_URI = f'rtsp://{TCP_IP}:8554/'
     else:
         TCP_IP = '192.168.100.1'
         TCP_PORT = 8888
