@@ -7,6 +7,9 @@ import cv2
 from kivy.config import Config
 from kivy import platform
 
+import sys
+from kivy.resources import resource_add_path, resource_find
+
 from rtsp import RTSPStreamer
 
 if platform == 'win' or platform == 'linux':
@@ -25,8 +28,10 @@ from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 
 import control
 from tcp_client import TCPClient
+from gui import KV
 
-Builder.load_file("gui.kv")
+# Builder.load_file("gui.kv")
+Builder.load_string(KV)
 
 class MainScreen(Screen):
     ...
@@ -160,6 +165,7 @@ class StreamApp(MDApp):
         self.theme_cls.accent_palette = 'Teal'
         self.theme_cls.accent_hue = "800"
 
+        Window.set_icon('icon.ico')
         Window.minimum_width = 700
         Window.minimum_height = 400
 
@@ -346,4 +352,8 @@ if __name__ == '__main__':
 
     control.set_uri(WS_URI)
 
+    os.environ["KIVY_NO_CONSOLELOG"] = "1"
+    os.environ['KIVY_GL_BACKEND'] = 'angle_sdl2'
+    if hasattr(sys, '_MEIPASS'):
+        resource_add_path(os.path.join(sys._MEIPASS))
     asyncio.run(main())
