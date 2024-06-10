@@ -62,22 +62,18 @@ class StreamApp(MDApp):
                 if self.rtsp.status != 'working' and not self.rtsp_task:
                     print("Starting RTSP stream")
                     self.rtsp_task = asyncio.create_task(self.start_stream())
-                    await self.start_stream()
-                elif self.rtsp.status == 'working':
+                elif self.rtsp.status == 'working' and self.rtsp_task:
                     await self.show_stream_widget()
                 # elif self.rtsp.status != 'working' and self.rtsp_task:
                 #     await self.on_stream_fallthrough()
                 #     self.rtsp_task = None
                 else:
-                    print("Unexpected stream error")
-                    print(f"TCP connected: {self.tcp.sock_connected}, RTSP status: {self.rtsp.status}")
+                    pass
+                    # print("Unexpected stream error")
+                    # print(f"TCP connected: {self.tcp.sock_connected}, RTSP status: {self.rtsp.status}")
+                    # await self.on_stream_fallthrough()
             else:
                 await self.on_stream_fallthrough()
-                # if self.rtsp.status == 'working':
-                #     print("Stopping RTSP stream")
-                #     await self.stop_stream()
-                # await self.hide_stream_widget()
-
             await asyncio.sleep(1 / 4)
 
     def on_start(self):
@@ -127,8 +123,9 @@ class StreamApp(MDApp):
 
     async def on_stream_fallthrough(self):
         await self.stop_stream()
+        # await self.tcp.close()
         await self.hide_stream_widget()
-        await self.status("Loosing RTSP stream\ntrying to restart...")
+        await self.status("RTSP stream lost\ntrying to restart...")
         await asyncio.sleep(1)
 
     async def start_stream(self):
@@ -136,10 +133,11 @@ class StreamApp(MDApp):
         self.texture_task = asyncio.create_task(self.update_texture())
 
     async def stop_stream(self):
+        if self.rtsp.status == 'working':
+            await self.rtsp.stop()
         if self.rtsp_task:
             self.rtsp_task.cancel()
             self.rtsp_task = None
-        await self.rtsp.stop()
         if self.texture_task:
             self.texture_task.cancel()
             self.texture_task = None
@@ -191,7 +189,6 @@ class StreamApp(MDApp):
         ffc_btn.bind(on_press=lambda x: asyncio.create_task(self.on_ffc_press()))
         shot_btn.bind(on_press=lambda x: asyncio.create_task(self.on_shot_btn()))
 
-
     async def init_tcp_socket(self):
         while True:
             while not self.tcp.sock_connected:
@@ -209,9 +206,9 @@ class StreamApp(MDApp):
                     await asyncio.sleep(1)
 
             while self.tcp.sock_connected:
-                res = await self.tcp.check_socket()
-                if res is False:
-                    await asyncio.sleep(5)
+                await self.tcp.check_socket()
+                # if res is False:
+                await asyncio.sleep(5)
 
     async def status(self, message):
         self.placeholder.text = message

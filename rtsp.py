@@ -1,11 +1,13 @@
 import asyncio
 import time
-import av
 from concurrent.futures import ThreadPoolExecutor
+
+import av
 import cv2
 import numpy as np
 
 _fake_frame_init_value = time.time()
+
 
 def _create_fake_frame(h, w):
     et = time.time() - _fake_frame_init_value
@@ -17,6 +19,7 @@ def _create_fake_frame(h, w):
     cv2.rectangle(f, tl, br, (0, 0, 255), -1)
     return f
 
+
 class RTSPStreamer:
     def __init__(self, url, fake_stream=True):
         self.url = url
@@ -27,6 +30,8 @@ class RTSPStreamer:
         self._stop_event = asyncio.Event()
         self._task = None
         self._fake_stream = fake_stream
+
+        self.executor = ThreadPoolExecutor(max_workers=1)
 
     def shot(self, filename):
         if self.frame is not None:
@@ -49,15 +54,26 @@ class RTSPStreamer:
             self.status = f'error: {e}'
             print(f"Fake stream error: {e}")
 
-    async def read_frame(self):
+    async def read_frame_with_timeout(self, timeout=5):
+        retries = 5
+        loop = asyncio.get_running_loop()
+        while retries > 0:
+            try:
+                await asyncio.wait_for(loop.run_in_executor(self.executor, self.read_frame), timeout)
+            except asyncio.TimeoutError:
+                self.frame = None
+            retries -= 1
+        if self.frame is None:
+            raise asyncio.TimeoutError("RSTP stream lost")
+
+    def read_frame(self):
         for packet in self.container.demux():
             if packet.stream.type == 'video':
                 for frame in packet.decode():
                     img = frame.to_image()
                     frame_array = np.array(img)
                     self.frame = cv2.flip(frame_array, 0)
-                    # print("Frame read and processed")
-                    return  # Exit after processing one frame
+                    return
         print("No video packet found")
 
     async def fetch_frames(self):
@@ -74,9 +90,8 @@ class RTSPStreamer:
                 if self._stop_event.is_set():
                     print("Stop event was set before entering the loop.")
                     return
-
                 while not self._stop_event.is_set():
-                    await self.read_frame()
+                    await self.read_frame_with_timeout(1)
                     await asyncio.sleep(1 / self.fps)
                 self.status = 'stopped'
                 print("Exited streaming loop")
