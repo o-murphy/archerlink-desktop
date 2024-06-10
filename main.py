@@ -108,7 +108,6 @@ class StreamApp(MDApp):
 
     async def update_texture(self):
         print("Updating texture task")
-
         while True:
             if self.rtsp.frame is not None:
                 # print("Updating texture")
@@ -119,15 +118,12 @@ class StreamApp(MDApp):
                 texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
                 self.image.texture = texture
                 self.image.canvas.ask_update()
-                # print("Texture updated")
-            # else:
-                # print("No frame to update")
             await asyncio.sleep(1 / self.rtsp.fps)
 
     async def on_stream_fallthrough(self):
         await self.stop_stream()
         await self.hide_stream_widget()
-        await self.status("RTSP stream lost\ntrying to restart...")
+        # await self.status("RTSP stream lost\ntrying to restart...")
         await asyncio.sleep(1)
 
     async def start_stream(self):
