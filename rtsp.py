@@ -30,9 +30,6 @@ class RTSPStreamer:
 
     def shot(self, filename):
         if self.frame is not None:
-            # buf, width, height = self.frame
-            # image = np.frombuffer(buf, dtype=np.uint8).reshape((height, width, 3))
-            # image = cv2.flip(image, 0)
             cv2.imwrite(filename, self.frame)
 
     async def fake_stream(self):
@@ -52,39 +49,62 @@ class RTSPStreamer:
             self.status = f'error: {e}'
             print(f"Fake stream error: {e}")
 
+    async def read_frame(self):
+        for packet in self.container.demux():
+            if packet.stream.type == 'video':
+                for frame in packet.decode():
+                    img = frame.to_image()
+                    frame_array = np.array(img)
+                    self.frame = cv2.flip(frame_array, 0)
+                    # print("Frame read and processed")
+                    return  # Exit after processing one frame
+        print("No video packet found")
+
     async def fetch_frames(self):
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as pool:
             try:
+                print("Opening container")
                 self.container = await loop.run_in_executor(pool, av.open, self.url)
-                stream = self.container.streams.video[0]
                 self.fps = self.container.streams.video[0].average_rate
                 self.status = 'working'
+                print("Entering streaming loop")
+                print(f"Stop event is set: {self._stop_event.is_set()}")
+
+                if self._stop_event.is_set():
+                    print("Stop event was set before entering the loop.")
+                    return
+
                 while not self._stop_event.is_set():
-                    frames = await loop.run_in_executor(pool, lambda: list(self.container.decode(stream)))
-                    for frame in frames:
-                        if self._stop_event.is_set():
-                            break
-                        self.frame = frame.to_ndarray(format='bgr24')  # Convert to numpy array
-                        await asyncio.sleep(1 / self.fps)
+                    await self.read_frame()
+                    await asyncio.sleep(1 / self.fps)
                 self.status = 'stopped'
+                print("Exited streaming loop")
             except Exception as e:
                 self.status = f'error: {e}'
-                print(f"RTSP fetch error: {e}")
+                print(f"RTSP stream error: {e}")
+            finally:
                 if self.container:
                     self.container.close()
+                print("Streaming stopped, container closed.")
 
     async def start(self):
         self._stop_event.clear()
+        print("Starting stream, stop event cleared.")
+        print(f"Stop event is set after clear: {self._stop_event.is_set()}")
         if self._fake_stream:
             self._task = asyncio.create_task(self.fake_stream())
         else:
             self._task = asyncio.create_task(self.fetch_frames())
 
     async def stop(self):
+        print("Stopping stream, stop event set.")
         self._stop_event.set()
+        print(f"Stop event is set in stop: {self._stop_event.is_set()}")
         if self._task:
+            print("Awaiting task to finish")
             await self._task
         if self.container:
             self.container.close()
         self.status = 'stopped'
+        print("Stream fully stopped.")

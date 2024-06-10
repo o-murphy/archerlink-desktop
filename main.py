@@ -62,11 +62,12 @@ class StreamApp(MDApp):
                 if self.rtsp.status != 'working' and not self.rtsp_task:
                     print("Starting RTSP stream")
                     self.rtsp_task = asyncio.create_task(self.start_stream())
+                    await self.start_stream()
                 elif self.rtsp.status == 'working':
                     await self.show_stream_widget()
-                elif self.rtsp.status != 'working' and self.rtsp_task:
-                    await self.on_stream_fallthrough()
-                    self.rtsp_task = None
+                # elif self.rtsp.status != 'working' and self.rtsp_task:
+                #     await self.on_stream_fallthrough()
+                #     self.rtsp_task = None
                 else:
                     print("Unexpected stream error")
                     print(f"TCP connected: {self.tcp.sock_connected}, RTSP status: {self.rtsp.status}")
@@ -107,18 +108,21 @@ class StreamApp(MDApp):
         return resized_frame
 
     async def update_texture(self):
+        print("Updating texture task")
+
         while True:
             if self.rtsp.frame is not None:
+                # print("Updating texture")
                 frame = self.rtsp.frame
                 resized_frame = self.resize_frame(frame)  # Resize frame to widget size
                 buf = resized_frame.tobytes()
-                texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='bgr')
-                texture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
+                texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='rgb')
+                texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
                 self.image.texture = texture
                 self.image.canvas.ask_update()
                 # print("Texture updated")
-            else:
-                print("No frame to update")
+            # else:
+                # print("No frame to update")
             await asyncio.sleep(1 / 30)
 
     async def on_stream_fallthrough(self):
@@ -209,27 +213,6 @@ class StreamApp(MDApp):
                 if res is False:
                     await asyncio.sleep(5)
 
-    # async def init_tcp_socket(self):
-    #     while True:
-    #         while not self.tcp_client.sock_connected:
-    #             status_task = asyncio.create_task(
-    #                 self._waiting_msg(
-    #                     f"Connecting to {TCP_IP}:{TCP_PORT}\nWaiting for device"
-    #                 )
-    #             )
-    #             res = await self.tcp_client.connect()
-    #             status_task.cancel()
-    #             if not res:
-    #                 await self.status("Can't connect to device")
-    #                 await asyncio.sleep(1)
-    #                 await self.status("Retrying...")
-    #                 await asyncio.sleep(1)
-    #
-    #         while self.tcp_client.sock_connected:
-    #             res = await self.tcp_client.check_socket()
-    #             if res is False:
-    #                 await asyncio.sleep(5)
-
     async def status(self, message):
         self.placeholder.text = message
 
@@ -277,7 +260,7 @@ async def main():
     await app.async_run()
 
 if __name__ == '__main__':
-    DEBUG = True
+    DEBUG = False
     if DEBUG:
         TCP_IP = '127.0.0.1'
         TCP_PORT = 8888
