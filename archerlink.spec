@@ -12,7 +12,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('gui.kv', '.'),
-        ('icon.ico', '.')
+        ('icon.png', '.')
     ],
     hiddenimports=[
         'pkg_resources.extern',
@@ -44,7 +44,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

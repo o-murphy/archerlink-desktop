@@ -336,6 +336,18 @@ async def main():
     await app.async_run()
 
 if __name__ == '__main__':
+    os.environ["KIVY_NO_CONSOLELOG"] = "1"
+    # os.environ['KIVY_GL_BACKEND'] = 'angle_sdl2'
+    if hasattr(sys, '_MEIPASS'):
+        resource_add_path(os.path.join(sys._MEIPASS))
+        ico_path = os.path.join(sys._MEIPASS, "icon.png")
+        gui_path = os.path.join(sys._MEIPASS, "gui.kv")
+    else:
+        ico_path = 'icon.png'
+        gui_path = "gui.kv"
+    Config.set('kivy', 'window_icon', ico_path)
+    Builder.load_file(gui_path)
+
     DEBUG = False
     if DEBUG:
         TCP_IP = '127.0.0.1'
@@ -351,15 +363,4 @@ if __name__ == '__main__':
         RTSP_URI = f'rtsp://{TCP_IP}/stream0'
 
     control.set_uri(WS_URI)
-
-    os.environ["KIVY_NO_CONSOLELOG"] = "1"
-    os.environ['KIVY_GL_BACKEND'] = 'angle_sdl2'
-    if hasattr(sys, '_MEIPASS'):
-        resource_add_path(os.path.join(sys._MEIPASS))
-        ico_path = os.path.join(sys._MEIPASS, "icon.ico")
-        gui_path = os.path.join(sys._MEIPASS, "gui.kv")
-    else:
-        ico_path = 'icon.ico'
-        gui_path = "gui.kv"
-    Builder.load_file(gui_path)
     asyncio.run(main())
