@@ -28,10 +28,10 @@ from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 
 import control
 from tcp_client import TCPClient
-from gui import KV
+# from gui import KV
 
-# Builder.load_file("gui.kv")
-Builder.load_string(KV)
+
+# Builder.load_string(KV)
 
 class MainScreen(Screen):
     ...
@@ -165,7 +165,7 @@ class StreamApp(MDApp):
         self.theme_cls.accent_palette = 'Teal'
         self.theme_cls.accent_hue = "800"
 
-        Window.set_icon('icon.ico')
+        Window.set_icon(ico_path)
         Window.minimum_width = 700
         Window.minimum_height = 400
 
@@ -356,4 +356,10 @@ if __name__ == '__main__':
     os.environ['KIVY_GL_BACKEND'] = 'angle_sdl2'
     if hasattr(sys, '_MEIPASS'):
         resource_add_path(os.path.join(sys._MEIPASS))
+        ico_path = os.path.join(sys._MEIPASS, "icon.ico")
+        gui_path = os.path.join(sys._MEIPASS, "gui.kv")
+    else:
+        ico_path = 'icon.ico'
+        gui_path = "gui.kv"
+    Builder.load_file(gui_path)
     asyncio.run(main())
