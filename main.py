@@ -126,7 +126,6 @@ class StreamApp(MDApp):
 
     async def on_stream_fallthrough(self):
         await self.stop_stream()
-        # await self.tcp.close()
         await self.hide_stream_widget()
         await self.status("RTSP stream lost\ntrying to restart...")
         await asyncio.sleep(1)
@@ -167,7 +166,11 @@ class StreamApp(MDApp):
 
         Window.minimum_width = 700
         Window.minimum_height = 400
-        Window.size = (700, 400)
+
+        # Window.size = (700, 400)
+        # Window.fullscreen = 'auto'
+        # Window.borderless = True
+        Window.maximize()
         return self.screen
 
     async def _waiting_msg(self, msg):
@@ -231,6 +234,7 @@ class StreamApp(MDApp):
             await self.toast(f"Photo saved to\n{fname}")
 
     async def start_rec(self):
+        err = False
         fname = await self.get_out_filename()
         self.output_container = av.open(fname + '.mov', mode='w')
         stream = self.output_container.add_stream('h264', rate=self.rtsp.fps)
@@ -270,8 +274,13 @@ class StreamApp(MDApp):
         except av.error.EOFError:
             print("End of file reached or error encountered in the stream")
 
+        except Exception as e:
+            err = True
+
         finally:
             self.output_container.close()
+            if not err:
+                await self.toast(f"Photo saved to\n{fname + '.mov'}")
             if self.record:
                 self.record = False
                 await self.on_rec_btn()

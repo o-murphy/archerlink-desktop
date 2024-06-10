@@ -35,7 +35,8 @@ class RTSPStreamer:
 
     def shot(self, filename):
         if self.frame is not None:
-            cv2.imwrite(filename, self.frame)
+            rgb_frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+            cv2.imwrite(filename, rgb_frame)
 
     async def fake_stream(self):
         until_err = 5
