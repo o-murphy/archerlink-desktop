@@ -2,6 +2,7 @@ import asyncio
 import os
 from datetime import datetime
 
+import av
 import cv2
 from kivy.config import Config
 from kivy import platform
@@ -52,6 +53,8 @@ class StreamApp(MDApp):
         self.tcp_socket_task = None
         self.texture_task = None
         self.rtsp_task = None
+
+        self.record = False
 
     async def watchdog(self):
         await self.status("Initializing...")
@@ -119,7 +122,7 @@ class StreamApp(MDApp):
                 # print("Texture updated")
             # else:
                 # print("No frame to update")
-            await asyncio.sleep(1 / 30)
+            await asyncio.sleep(1 / self.rtsp.fps)
 
     async def on_stream_fallthrough(self):
         await self.stop_stream()
@@ -183,11 +186,13 @@ class StreamApp(MDApp):
         color_btn = self.screen.ids.color_btn
         ffc_btn = self.screen.ids.ffc_btn
         shot_btn = self.screen.ids.shot_btn
+        rec_btn = self.screen.ids.rec_btn
         zoom_btn.bind(on_press=lambda x: asyncio.create_task(self.on_zoom_press()))
         agc_btn.bind(on_press=lambda x: asyncio.create_task(self.on_agc_press()))
         color_btn.bind(on_press=lambda x: asyncio.create_task(self.on_color_press()))
         ffc_btn.bind(on_press=lambda x: asyncio.create_task(self.on_ffc_press()))
         shot_btn.bind(on_press=lambda x: asyncio.create_task(self.on_shot_btn()))
+        rec_btn.bind(on_press=lambda x: asyncio.create_task(self.on_rec_btn()))
 
     async def init_tcp_socket(self):
         while True:
@@ -213,14 +218,77 @@ class StreamApp(MDApp):
     async def status(self, message):
         self.placeholder.text = message
 
-    async def on_shot_btn(self):
+    async def get_out_filename(self):
         outdir = os.path.join(os.path.expanduser("~"), 'Pictures', 'ArcherLink')
         os.makedirs(outdir, exist_ok=True)
         dt = datetime.now().strftime("%y%m%d-%H%M%S")
-        fname = os.path.join(outdir, f"{dt}.png")
+        return os.path.join(outdir, f"{dt}")
+
+    async def on_shot_btn(self):
+        fname = await self.get_out_filename()
         if self.rtsp.status == 'working' and self.tcp.sock_connected:
-            self.rtsp.shot(fname)
+            self.rtsp.shot(fname + '.png')
             await self.toast(f"Photo saved to\n{fname}")
+
+    async def start_rec(self):
+        fname = await self.get_out_filename()
+        self.output_container = av.open(fname + '.mov', mode='w')
+        stream = self.output_container.add_stream('h264', rate=self.rtsp.fps)
+        height, width, _ = self.rtsp.frame.shape
+        stream.width = width
+        stream.height = height
+        stream.pix_fmt = 'yuv420p'
+
+        try:
+            while self.record:
+                # Simulate a small delay to avoid blocking the event loop
+                await asyncio.sleep(1 / self.rtsp.fps)
+
+                if self.rtsp.frame is None:
+                    continue  # Skip if no frame is available
+
+                # Convert numpy.ndarray to av.VideoFrame
+                frame = cv2.flip(self.rtsp.frame, 0)
+                frame = av.VideoFrame.from_ndarray(frame, format='rgb24')
+
+                # Reformat the frame to match the output stream settings
+                frame = frame.reformat(width=stream.width, height=stream.height, format=stream.pix_fmt)
+
+                # Encode the frame
+                packet = stream.encode(frame)
+
+                # Write the packet to the output file
+                if packet:
+                    self.output_container.mux(packet)
+
+            # Flush the encoder to make sure all frames are written
+            packet = stream.encode(None)
+            while packet:
+                self.output_container.mux(packet)
+                packet = stream.encode(None)
+
+        except av.error.EOFError:
+            print("End of file reached or error encountered in the stream")
+
+        finally:
+            self.output_container.close()
+            if self.record:
+                self.record = False
+                await self.on_rec_btn()
+
+    async def on_rec_btn(self):
+        button = self.root.ids.rec_btn
+        icon = self.root.ids.rec_btn_icon
+        if not self.record:
+            button.color_map = "tertiary"
+            icon.text_color = self.theme_cls.onErrorColor
+            self.record = True
+            self.rec_task = asyncio.create_task(self.start_rec())
+        else:
+            button.color_map = "surface"
+            icon.text_color = self.theme_cls.primaryColor
+            self.record = False
+            await self.rec_task
 
     async def toast(self, text):
         MDSnackbar(
