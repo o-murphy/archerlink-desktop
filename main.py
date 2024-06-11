@@ -113,10 +113,18 @@ class StreamApp(MDApp):
 
     async def update_texture(self):
         print("Updating texture task")
+        prev_frame = None
+        retries = 60
         while True:
             if self.rtsp.frame is not None:
                 # print("Updating texture")
                 frame = self.rtsp.frame
+                # if frame == prev_frame:
+                #     if retries > 0:
+                #         continue
+                #     else:
+                #         self.rtsp._stop_event.set()
+                #         break
                 resized_frame = self.resize_frame(frame)  # Resize frame to widget size
                 buf = resized_frame.tobytes()
                 texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='rgb')
