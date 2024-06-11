@@ -51,8 +51,7 @@ RTSP_URI = SERVER['RTSP_URI'].format(TCP_IP=TCP_IP)
 if DEBUG:
     from modules import debug
 
-    # tcp_task = open_tcp(TCP_IP, TCP_PORT)
-    # debug.open_tcp(TCP_IP, TCP_PORT)
+    debug.open_tcp(TCP_IP, TCP_PORT)
     debug.open_vlc(RTSP_URI)
 
 
