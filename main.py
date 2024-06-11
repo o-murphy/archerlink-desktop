@@ -75,10 +75,49 @@ class StreamApp(MDApp):
     def on_start(self):
         self.bind_ui()
         self._tasks = [
+            asyncio.create_task(self.watchdog()),
             asyncio.create_task(self.tcp_polling()),
             asyncio.create_task(self.update_texture()),
             asyncio.create_task(self.rtsp_stream_task())
         ]
+
+    async def watchdog(self):
+        try:
+
+            i = 0
+            prev_state = self.tcp.sock_connected and self.rtsp.status == "working"
+            async def spin(msg):
+                nonlocal i
+                await self.status(msg + "." * i + " " * (3 - i))
+                i += 1
+                if i >= 4:
+                    i = 0
+                await asyncio.sleep(0)
+
+            while True:
+                if not (cur_state := self.tcp.sock_connected):
+                    if prev_state != cur_state:
+                        await self.hide_stream_widget()
+
+                    await spin("Device not connected")
+                else:
+                    if not (cur_state := self.rtsp.status == "working"):
+                        if prev_state != cur_state:
+                            await self.hide_stream_widget()
+
+                        await spin("Trying to get stream")
+                    else:
+                        if prev_state != cur_state:
+                            await self.show_stream_widget()
+
+                prev_state = cur_state
+
+                await asyncio.sleep(0.5)
+        except asyncio.CancelledError:
+            print("Watchdog cancelled")
+
+        finally:
+            print("Watchdog finally closed")
 
     async def rtsp_stream_task(self):
         try:
@@ -100,7 +139,7 @@ class StreamApp(MDApp):
         try:
             while True:
                 if self.rtsp.frame is not None:
-                    await self.show_stream_widget()
+                    # await self.show_stream_widget()
                     resized_frame = self.resize_frame(self.rtsp.frame)
                     buf = resized_frame.tobytes()
                     texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='rgb')
@@ -109,7 +148,7 @@ class StreamApp(MDApp):
                     self.image.canvas.ask_update()
                     await asyncio.sleep(1 / self.rtsp.fps)
                 else:
-                    await self.hide_stream_widget()
+                    # await self.hide_stream_widget()
                     await asyncio.sleep(1)
         except asyncio.CancelledError:
             print("Update texture task cancelled")
@@ -123,12 +162,14 @@ class StreamApp(MDApp):
         self.tcp.close()
 
     async def show_stream_widget(self):
+        print("Stream shows")
         if self.image not in self.center_column.children:
             self.center_column.remove_widget(self.placeholder)
             self.center_column.add_widget(self.image)
         await asyncio.sleep(0)
 
     async def hide_stream_widget(self):
+        print("Stream hides")
         if self.image in self.center_column.children:
             self.center_column.remove_widget(self.image)
             self.center_column.add_widget(self.placeholder)
@@ -138,7 +179,7 @@ class StreamApp(MDApp):
         async def spinner():
             i = 0
             while True:
-                await self.status(f"{msg}" + "." * i + " " * (3 - i))
+                # await self.status(f"{msg}" + "." * i + " " * (3 - i))
                 i += 1
                 if i >= 4:
                     i = 0
@@ -159,9 +200,9 @@ class StreamApp(MDApp):
                     res = await self.tcp.connect()
                     status_task.cancel()
                     if not res:
-                        await self.status("Can't connect to device")
+                        # await self.status("Can't connect to device")
                         await asyncio.sleep(1)
-                        await self.status("Retrying...")
+                        # await self.status("Retrying...")
                         await asyncio.sleep(1)
 
                 while self.tcp.sock_connected:
