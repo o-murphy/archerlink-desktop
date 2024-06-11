@@ -33,3 +33,10 @@ python -m pip install -U pip setuptools wheel
 pip install -r .\requirements.txt
 pyinstaller .\archerlink.spec --clean --log-level WARN
 ```
+
+```cmd
+# run fake stream
+"C:\Program Files\VideoLAN\VLC\vlc.exe" -vvv "screen://" --screen-fps=30 --sout "#transcode{vcodec=mp4v,acodec=none}:rtp{sdp=rtsp://:8554/test}" --no-sout-all --sout-keep
+"C:\Program Files\VideoLAN\VLC\vlc.exe" -vvv "screen://" --screen-fps=60 --sout "#transcode{vcodec=mp4v,vfilter=croppadd{croptop=0,cropbottom=0,cropleft=0,cropright=0,paddtop=0,paddbottom=0,paddleft=0,paddright=0},width=640,height=480,acodec=none}:rtp{sdp=rtsp://:8554/test}" --no-sout-all --sout-keep
+
+```

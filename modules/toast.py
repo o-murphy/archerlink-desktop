@@ -33,9 +33,9 @@ async def file_toast(text, path):
         ),
         MDSnackbarButtonContainer(
             action_button,
-            MDSnackbarCloseButton(
-                icon="close",
-            ),
+            # MDSnackbarCloseButton(
+            #     icon="close",
+            # ),
             pos_hint={"center_y": 0.5}
         ),
         y=dp(24),

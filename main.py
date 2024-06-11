@@ -83,7 +83,7 @@ class StreamApp(MDApp):
         self.rtsp = RTSPStreamer(RTSP_URI, DEBUG)
         self.recorder = MovRecorder(self.rtsp, self.on_record_stop)
 
-        self.texture_task = None
+        self._tasks = None
         self.rtsp_task = None
 
     def bind_ui(self):
@@ -115,7 +115,7 @@ class StreamApp(MDApp):
 
     def on_start(self):
         self.bind_ui()
-        asyncio.gather(
+        self._tasks = asyncio.gather(
             asyncio.create_task(self.watchdog()),
             asyncio.create_task(self.tcp_polling()),
             asyncio.create_task(self.update_texture())
@@ -165,9 +165,11 @@ class StreamApp(MDApp):
                 texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
                 self.image.texture = texture
                 self.image.canvas.ask_update()
+                await asyncio.sleep(1 / self.rtsp.fps)
             else:
                 await self.hide_stream_widget()
-            await asyncio.sleep(1 / self.rtsp.fps)
+                await asyncio.sleep(1)
+
 
     async def start_stream(self):
         await self.rtsp.start()
@@ -178,6 +180,7 @@ class StreamApp(MDApp):
         if self.rtsp_task:
             self.rtsp_task.cancel()
             self.rtsp_task = None
+        self.tcp.close()
 
     async def show_stream_widget(self):
         if self.image not in self.center_column.children:
@@ -255,8 +258,10 @@ class StreamApp(MDApp):
 
     def on_stop(self):
         if self.rtsp._task is not None:
+            self.rtsp.stop()
             self.rtsp._task.cancel()
         self.tcp.close()
+        # self._tasks.cancel()
 
 
 async def main():

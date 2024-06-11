@@ -1,10 +1,10 @@
 import cv2
-from modules import rtsp
+import rtsp
 
 
 def test_stream():
     try:
-        with rtsp.Client(rtsp_server_uri='rtsp://192.168.100.1/stream0') as client:
+        with rtsp.Client(rtsp_server_uri='rtsp://127.0.0.1:8554/test') as client:
             while True:
                 frame = client.read(raw=True)
                 if frame is not None:

@@ -1,4 +1,4 @@
-from .movrecorder import MovRecorder
+from .mov import MovRecorder
 from .rtsp import RTSPStreamer
 from .tcp import TCPClient
 from .toast import toast, file_toast
