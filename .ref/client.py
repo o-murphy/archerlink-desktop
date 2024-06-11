@@ -1,4 +1,4 @@
-import rtsp
+from modules import rtsp
 
 
 def preview():

@@ -1,5 +1,6 @@
 import cv2
-import rtsp
+from modules import rtsp
+
 
 def test_stream():
     try:

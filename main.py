@@ -3,17 +3,15 @@ import os
 import subprocess
 from datetime import datetime
 
-import av
 import cv2
 from kivy.config import Config
 from kivy import platform
 
 import sys
-from kivy.resources import resource_add_path, resource_find
+from kivy.resources import resource_add_path
 
-from movrecorder import MovRecorder
-from rtsp import RTSPStreamer
-from toast import file_toast
+from modules import MovRecorder, RTSPStreamer, file_toast
+from modules.control import websocket
 
 if platform == 'win' or platform == 'linux':
     Config.set('graphics', 'maxfps', '120')
@@ -27,8 +25,7 @@ from kivy.lang import Builder
 from kivy.uix.screenmanager import Screen
 from kivymd.app import MDApp
 
-import control
-from tcp import TCPClient
+from modules.tcp import TCPClient
 
 if platform == 'win':
     OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "AppData", "Local", "ArcherLink")
@@ -79,10 +76,10 @@ class StreamApp(MDApp):
         self.rtsp_task = None
 
     def bind_ui(self):
-        self.screen.ids.zoom_btn.bind(on_press=lambda x: asyncio.create_task(control.change_zoom()))
-        self.screen.ids.agc_btn.bind(on_press=lambda x: asyncio.create_task(control.change_agc()))
-        self.screen.ids.color_btn.bind(on_press=lambda x: asyncio.create_task(control.change_color_scheme()))
-        self.screen.ids.ffc_btn.bind(on_press=lambda x: asyncio.create_task(control.send_trigger_ffc_command()))
+        self.screen.ids.zoom_btn.bind(on_press=lambda x: asyncio.create_task(websocket.change_zoom()))
+        self.screen.ids.agc_btn.bind(on_press=lambda x: asyncio.create_task(websocket.change_agc()))
+        self.screen.ids.color_btn.bind(on_press=lambda x: asyncio.create_task(websocket.change_color_scheme()))
+        self.screen.ids.ffc_btn.bind(on_press=lambda x: asyncio.create_task(websocket.send_trigger_ffc_command()))
         self.screen.ids.shot_btn.bind(on_press=lambda x: asyncio.create_task(self.on_shot_button()))
         self.screen.ids.rec_btn.bind(on_press=lambda x: asyncio.create_task(self.on_rec_button()))
         self.screen.ids.folder_btn.bind(on_press=lambda x: asyncio.create_task(open_output_dir()))
@@ -283,5 +280,5 @@ if __name__ == '__main__':
         WS_URI = f'ws://{TCP_IP}:{WS_PORT}/websocket'
         RTSP_URI = f'rtsp://{TCP_IP}/stream0'
 
-    control.set_uri(WS_URI)
+    websocket.set_uri(WS_URI)
     asyncio.run(main())
