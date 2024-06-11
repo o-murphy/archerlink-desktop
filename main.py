@@ -66,8 +66,6 @@ class StreamApp(MDApp):
 
         if DEBUG:
             Window.size = (700, 400)
-            # Window.fullscreen = 'auto'
-            # Window.borderless = True
         else:
             Window.maximize()
         return self.screen
@@ -83,7 +81,6 @@ class StreamApp(MDApp):
 
     async def watchdog(self):
         try:
-
             i = 0
             prev_state = self.tcp.sock_connected and self.rtsp.status == "working"
             async def spin(msg):
@@ -115,7 +112,6 @@ class StreamApp(MDApp):
                 await asyncio.sleep(0.5)
         except asyncio.CancelledError:
             print("Watchdog cancelled")
-
         finally:
             print("Watchdog finally closed")
 
@@ -139,7 +135,6 @@ class StreamApp(MDApp):
         try:
             while True:
                 if self.rtsp.frame is not None:
-                    # await self.show_stream_widget()
                     resized_frame = self.resize_frame(self.rtsp.frame)
                     buf = resized_frame.tobytes()
                     texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='rgb')
@@ -148,7 +143,6 @@ class StreamApp(MDApp):
                     self.image.canvas.ask_update()
                     await asyncio.sleep(1 / self.rtsp.fps)
                 else:
-                    # await self.hide_stream_widget()
                     await asyncio.sleep(1)
         except asyncio.CancelledError:
             print("Update texture task cancelled")
@@ -179,7 +173,6 @@ class StreamApp(MDApp):
         async def spinner():
             i = 0
             while True:
-                # await self.status(f"{msg}" + "." * i + " " * (3 - i))
                 i += 1
                 if i >= 4:
                     i = 0
@@ -200,9 +193,7 @@ class StreamApp(MDApp):
                     res = await self.tcp.connect()
                     status_task.cancel()
                     if not res:
-                        # await self.status("Can't connect to device")
                         await asyncio.sleep(1)
-                        # await self.status("Retrying...")
                         await asyncio.sleep(1)
 
                 while self.tcp.sock_connected:
