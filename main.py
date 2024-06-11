@@ -245,16 +245,17 @@ class StreamApp(MDApp):
             await self.on_record_stop()
 
     def on_stop(self):
-        self.tcp.close()
+        asyncio.create_task(self.cleanup())
 
+    async def cleanup(self):
+        await self.stop_stream()
+        await asyncio.sleep(1)  # Give some time to complete the stopping process
 
 async def main():
     app = StreamApp()
     await app.async_run()
 
-
 if __name__ == '__main__':
-
     if hasattr(sys, '_MEIPASS'):
         resource_add_path(os.path.join(sys._MEIPASS))
         ICO_PATH = os.path.join(sys._MEIPASS, ICO_PATH)
@@ -284,4 +285,3 @@ if __name__ == '__main__':
         debug.open_vlc(RTSP_URI)
 
     asyncio.run(main())
-
