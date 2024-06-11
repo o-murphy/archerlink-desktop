@@ -33,13 +33,14 @@ class RTSPStreamer:
 
         self.executor = ThreadPoolExecutor(max_workers=1)
 
-    def shot(self, filename):
+    async def shot(self, filename):
         if self.frame is not None:
             rgb_frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
-            cv2.imwrite(filename, rgb_frame)
+            cv2.imwrite(filename + '.png', rgb_frame)
+            return filename + '.png'
 
     async def fake_stream(self):
-        until_err = 5
+        # until_err = 5
         try:
             self.fps = 60
             self.status = 'working'
@@ -47,9 +48,9 @@ class RTSPStreamer:
                 frame = _create_fake_frame(480, 640)
                 self.frame = frame
                 await asyncio.sleep(1 / self.fps)
-                until_err -= 1 / self.fps
-                if until_err <= 0:
-                    raise IOError("Simulate stream drop down")
+                # until_err -= 1 / self.fps
+                # if until_err <= 0:
+                #     raise IOError("Simulate stream drop down")
             self.status = 'stopped'
         except Exception as e:
             self.status = f'error: {e}'
