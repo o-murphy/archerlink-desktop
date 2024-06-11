@@ -2,12 +2,9 @@ import asyncio
 
 from modules.env import *
 
-import cv2
-
 from kivy.core.window import Window
 from kivy.uix.image import Image
 from kivy.graphics.texture import Texture
-
 from kivy.lang import Builder
 from kivy.uix.screenmanager import Screen
 from kivymd.app import MDApp
@@ -40,11 +37,10 @@ class StreamApp(MDApp):
             command='CMD_RTSP_TRANS_START',
         )
         self.rtsp = RTSPStreamer(
-            RTSP_URI,
-            False
+            rtsp_uri=RTSP_URI,
+            fake_stream=False
         )
         self.recorder = MovRecorder(self.rtsp, self.on_record_stop)
-
         self._tasks = []
 
     def bind_ui(self):
@@ -178,7 +174,7 @@ class StreamApp(MDApp):
 
     async def on_shot_button(self):
         filename = await get_out_filename()
-        if self.rtsp.status == 'working' and self.tcp.sock_connected:
+        if self.rtsp.status == 'working':
             filename = await self.rtsp.shot(filename)
             await file_toast(f"Photo saved to\n{filename}", filename)
 

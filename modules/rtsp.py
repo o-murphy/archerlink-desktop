@@ -21,8 +21,8 @@ def _create_fake_frame(h, w):
 
 
 class RTSPStreamer:
-    def __init__(self, url, fake_stream=True):
-        self.url = url
+    def __init__(self, rtsp_uri, fake_stream=True):
+        self.rtsp_uri = rtsp_uri
         self.container = None
         self.fps = 50
         self.frame = None
@@ -78,7 +78,7 @@ class RTSPStreamer:
         with ThreadPoolExecutor() as pool:
             try:
                 print("Opening container")
-                self.container = await loop.run_in_executor(pool, av.open, self.url)
+                self.container = await loop.run_in_executor(pool, av.open, self.rtsp_uri)
                 fps = self.container.streams.video[0].average_rate
                 if fps is not None:
                     self.fps = fps
