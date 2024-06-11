@@ -3,6 +3,11 @@ import os
 import subprocess
 from datetime import datetime
 
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
 import cv2
 from kivy.config import Config
 from kivy import platform
@@ -26,6 +31,12 @@ from kivy.uix.screenmanager import Screen
 from kivymd.app import MDApp
 
 from modules.tcp import TCPClient
+
+os.environ["KIVY_NO_CONSOLELOG"] = "1"
+# os.environ['KIVY_GL_BACKEND'] = 'angle_sdl2'
+ICO_PATH = 'icon.png'
+KVGUI_PATH = "gui.kv"
+CONFIG_PATH = "config.toml"
 
 if platform == 'win':
     OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "AppData", "Local", "ArcherLink")
@@ -92,7 +103,7 @@ class StreamApp(MDApp):
         self.theme_cls.accent_palette = 'Teal'
         self.theme_cls.accent_hue = "800"
 
-        Window.set_icon(ico_path)
+        Window.set_icon(ICO_PATH)
         Window.minimum_width = 700
         Window.minimum_height = 400
 
@@ -254,31 +265,28 @@ async def main():
 
 
 if __name__ == '__main__':
-    os.environ["KIVY_NO_CONSOLELOG"] = "1"
-    # os.environ['KIVY_GL_BACKEND'] = 'angle_sdl2'
+
     if hasattr(sys, '_MEIPASS'):
         resource_add_path(os.path.join(sys._MEIPASS))
-        ico_path = os.path.join(sys._MEIPASS, "icon.png")
-        gui_path = os.path.join(sys._MEIPASS, "gui.kv")
-    else:
-        ico_path = 'icon.png'
-        gui_path = "gui.kv"
-    Config.set('kivy', 'window_icon', ico_path)
-    Builder.load_file(gui_path)
+        ICO_PATH = os.path.join(sys._MEIPASS, ICO_PATH)
+        KVGUI_PATH = os.path.join(sys._MEIPASS, KVGUI_PATH)
+        CONFIG_PATH = os.path.join(sys._MEIPASS, CONFIG_PATH)
 
-    DEBUG = True
-    if DEBUG:
-        TCP_IP = '127.0.0.1'
-        TCP_PORT = 8888
-        WS_PORT = 8080
-        WS_URI = f'ws://{TCP_IP}:{WS_PORT}/websocket'
-        RTSP_URI = f'rtsp://{TCP_IP}:8554/'
-    else:
-        TCP_IP = '192.168.100.1'
-        TCP_PORT = 8888
-        WS_PORT = 8080
-        WS_URI = f'ws://{TCP_IP}:{WS_PORT}/websocket'
-        RTSP_URI = f'rtsp://{TCP_IP}/stream0'
+    Config.set('kivy', 'window_icon', ICO_PATH)
+    Builder.load_file(KVGUI_PATH)
 
+    with open(CONFIG_PATH, 'rb') as fp:
+        cfg = tomllib.load(fp)
+
+    DEBUG = cfg.get('DEBUG', False)
+    SERVER = cfg['server' if not DEBUG else 'debug-server']
+
+    TCP_IP = SERVER['TCP_IP']
+    TCP_PORT = SERVER['TCP_PORT']
+    WS_PORT = SERVER['WS_PORT']
+    print(SERVER['WS_URI'])
+    WS_URI = SERVER['WS_URI'].format(TCP_IP=TCP_IP, WS_PORT=WS_PORT)
+    RTSP_URI = SERVER['RTSP_URI'].format(TCP_IP=TCP_IP)
     websocket.set_uri(WS_URI)
+
     asyncio.run(main())
