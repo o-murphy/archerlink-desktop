@@ -103,6 +103,8 @@ class RTSPStreamer:
                 if self.container:
                     self.container.close()
                 print("Streaming stopped, container closed.")
+                self.frame = None
+
 
     async def start(self):
         self._stop_event.clear()

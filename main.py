@@ -123,6 +123,8 @@ class StreamApp(MDApp):
                 texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
                 self.image.texture = texture
                 self.image.canvas.ask_update()
+            else:
+                await self.hide_stream_widget()
             await asyncio.sleep(1 / self.rtsp.fps)
 
     async def on_stream_fallthrough(self):
@@ -136,11 +138,11 @@ class StreamApp(MDApp):
         self.texture_task = asyncio.create_task(self.update_texture())
 
     async def stop_stream(self):
-        if self.rtsp.status == 'working':
-            await self.rtsp.stop()
-        if self.rtsp_task:
-            self.rtsp_task.cancel()
-            self.rtsp_task = None
+        # if self.rtsp.status == 'working':
+        #     await self.rtsp.stop()
+        # if self.rtsp_task:
+        #     self.rtsp_task.cancel()
+        #     self.rtsp_task = None
         if self.texture_task:
             self.texture_task.cancel()
             self.texture_task = None
