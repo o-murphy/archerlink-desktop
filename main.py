@@ -86,7 +86,7 @@ class StreamApp(MDApp):
         )
         self.recorder = MovRecorder(self.rtsp, self.on_record_stop)
 
-        self._tasks = None
+        self._tasks = []
 
     def bind_ui(self):
         self.screen.ids.zoom_btn.bind(on_press=lambda x: asyncio.create_task(websocket.change_zoom()))
@@ -119,18 +119,23 @@ class StreamApp(MDApp):
 
     def on_start(self):
         self.bind_ui()
-        self._tasks = asyncio.gather(
+        self._tasks = [
             asyncio.create_task(self.tcp_polling()),
             asyncio.create_task(self.update_texture()),
-            asyncio.create_task(self.rtsp_stream_task())  # Added RTSP stream task
-        )
+            asyncio.create_task(self.rtsp_stream_task())
+        ]
 
     async def rtsp_stream_task(self):
-        while True:
-            if self.rtsp.status != 'working':
-                print("RTSP stream error detected or stopped, attempting to restart")
-                await self.rtsp.start()
-            await asyncio.sleep(2)
+        try:
+            while True:
+                if self.rtsp.status != 'working':
+                    print("RTSP stream error detected or stopped, attempting to restart")
+                    await self.rtsp.start()
+                await asyncio.sleep(2)
+        except asyncio.CancelledError:
+            print("RTSP stream task cancelled")
+        finally:
+            await self.rtsp.stop()
 
     def resize_frame(self, frame):
         widget_width, widget_height = self.image.width, self.image.height
@@ -148,19 +153,22 @@ class StreamApp(MDApp):
         return resized_frame
 
     async def update_texture(self):
-        while True:
-            if self.rtsp.frame is not None:
-                await self.show_stream_widget()
-                resized_frame = self.resize_frame(self.rtsp.frame)
-                buf = resized_frame.tobytes()
-                texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='rgb')
-                texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
-                self.image.texture = texture
-                self.image.canvas.ask_update()
-                await asyncio.sleep(1 / self.rtsp.fps)
-            else:
-                await self.hide_stream_widget()
-                await asyncio.sleep(1)
+        try:
+            while True:
+                if self.rtsp.frame is not None:
+                    await self.show_stream_widget()
+                    resized_frame = self.resize_frame(self.rtsp.frame)
+                    buf = resized_frame.tobytes()
+                    texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='rgb')
+                    texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
+                    self.image.texture = texture
+                    self.image.canvas.ask_update()
+                    await asyncio.sleep(1 / self.rtsp.fps)
+                else:
+                    await self.hide_stream_widget()
+                    await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            print("Update texture task cancelled")
 
     async def start_stream(self):
         await self.rtsp.start()
@@ -198,22 +206,27 @@ class StreamApp(MDApp):
         self.placeholder.text = message
 
     async def tcp_polling(self):
-        while True:
-            while not self.tcp.sock_connected:
-                status_task = await self.spinn_message(
-                    f"Connecting to {TCP_IP}:{TCP_PORT}\nWaiting for device"
-                )
-                res = await self.tcp.connect()
-                status_task.cancel()
-                if not res:
-                    await self.status("Can't connect to device")
-                    await asyncio.sleep(1)
-                    await self.status("Retrying...")
-                    await asyncio.sleep(1)
+        try:
+            while True:
+                while not self.tcp.sock_connected:
+                    status_task = await self.spinn_message(
+                        f"Connecting to {TCP_IP}:{TCP_PORT}\nWaiting for device"
+                    )
+                    res = await self.tcp.connect()
+                    status_task.cancel()
+                    if not res:
+                        await self.status("Can't connect to device")
+                        await asyncio.sleep(1)
+                        await self.status("Retrying...")
+                        await asyncio.sleep(1)
 
-            while self.tcp.sock_connected:
-                await self.tcp.check_socket()
-                await asyncio.sleep(5)
+                while self.tcp.sock_connected:
+                    await self.tcp.check_socket()
+                    await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            print("TCP polling task cancelled")
+        finally:
+            self.tcp.close()
 
     async def on_shot_button(self):
         filename = await get_out_filename()
@@ -248,6 +261,9 @@ class StreamApp(MDApp):
         asyncio.create_task(self.cleanup())
 
     async def cleanup(self):
+        for task in self._tasks:
+            task.cancel()
+        await asyncio.gather(*self._tasks, return_exceptions=True)
         await self.stop_stream()
         await asyncio.sleep(1)  # Give some time to complete the stopping process
 
