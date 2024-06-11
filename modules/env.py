@@ -35,24 +35,32 @@ else:
     OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "Pictures", 'ArcherLink')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-with open(CONFIG_PATH, 'rb') as fp:
-    cfg = tomllib.load(fp)
 
-DEBUG = cfg.get('DEBUG', False)
+TCP_IP = '192.168.100.1'
+TCP_PORT = 8888
+WS_PORT = 8080
+WS_URI = 'ws://{TCP_IP}:{WS_PORT}/websocket'
+RTSP_URI = 'rtsp://{TCP_IP}/stream0'
 
-SERVER = cfg['debug-server' if DEBUG else 'server']
+if not hasattr(sys, '_MEIPASS'):
+    with open(CONFIG_PATH, 'rb') as fp:
+        cfg = tomllib.load(fp)
 
-TCP_IP = SERVER['TCP_IP']
-TCP_PORT = SERVER['TCP_PORT']
-WS_PORT = SERVER['WS_PORT']
-WS_URI = SERVER['WS_URI'].format(TCP_IP=TCP_IP, WS_PORT=WS_PORT)
-RTSP_URI = SERVER['RTSP_URI'].format(TCP_IP=TCP_IP)
+    DEBUG = cfg.get('DEBUG', False)
 
-if DEBUG:
-    from modules import debug
+    if DEBUG:
+        SERVER = cfg['debug-server' if DEBUG else 'server']
 
-    debug.open_tcp(TCP_IP, TCP_PORT)
-    debug.open_vlc(RTSP_URI)
+        TCP_IP = SERVER['TCP_IP']
+        TCP_PORT = SERVER['TCP_PORT']
+        WS_PORT = SERVER['WS_PORT']
+        WS_URI = SERVER['WS_URI'].format(TCP_IP=TCP_IP, WS_PORT=WS_PORT)
+        RTSP_URI = SERVER['RTSP_URI'].format(TCP_IP=TCP_IP)
+
+        from modules import debug
+
+        debug.open_tcp(TCP_IP, TCP_PORT)
+        debug.open_vlc(RTSP_URI)
 
 
 async def get_out_filename():
@@ -79,3 +87,19 @@ async def open_file_path(filepath):
     else:
         # On Linux, there is no standard way to highlight a file, just open the directory
         subprocess.Popen(['xdg-open', filepath])
+
+
+__all__ = (
+    'ICO_PATH',
+    'KVGUI_PATH',
+    'OUTPUT_DIR',
+    'DEBUG',
+    'TCP_IP',
+    'TCP_PORT',
+    'WS_PORT',
+    'WS_URI',
+    'RTSP_URI',
+    'get_out_filename',
+    'open_output_dir',
+    'open_file_path',
+)
