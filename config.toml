@@ -1,6 +1,6 @@
 # ArcherLink config
 
-DEBUG = false
+DEBUG = true
 
 [debug-server]
 TCP_IP = '127.0.0.1'
@@ -9,16 +9,16 @@ WS_PORT = 8080
 WS_URI = 'ws://{TCP_IP}:{WS_PORT}/websocket'
 RTSP_URI = 'rtsp://{TCP_IP}:8554/'
 
-#[server]
-#TCP_IP = '192.168.100.1'
-#TCP_PORT = 8888
-#WS_PORT = 8080
-#WS_URI = 'ws://{TCP_IP}:{WS_PORT}/websocket'
-#RTSP_URI = 'rtsp://{TCP_IP}/stream0'
-
 [server]
-TCP_IP = '127.0.0.1'
+TCP_IP = '192.168.100.1'
 TCP_PORT = 8888
 WS_PORT = 8080
 WS_URI = 'ws://{TCP_IP}:{WS_PORT}/websocket'
-RTSP_URI = 'rtsp://{TCP_IP}:8554/test'
+RTSP_URI = 'rtsp://{TCP_IP}/stream0'
+
+#[server]
+#TCP_IP = '127.0.0.1'
+#TCP_PORT = 8888
+#WS_PORT = 8080
+#WS_URI = 'ws://{TCP_IP}:{WS_PORT}/websocket'
+#RTSP_URI = 'rtsp://{TCP_IP}:8554/test'

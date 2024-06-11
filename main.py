@@ -80,11 +80,13 @@ class StreamApp(MDApp):
             server_port=TCP_PORT,
             command='CMD_RTSP_TRANS_START',
         )
-        self.rtsp = RTSPStreamer(RTSP_URI, DEBUG)
+        self.rtsp = RTSPStreamer(
+            RTSP_URI,
+            False
+        )
         self.recorder = MovRecorder(self.rtsp, self.on_record_stop)
 
         self._tasks = None
-        self.rtsp_task = None
 
     def bind_ui(self):
         self.screen.ids.zoom_btn.bind(on_press=lambda x: asyncio.create_task(websocket.change_zoom()))
@@ -107,43 +109,34 @@ class StreamApp(MDApp):
         Window.minimum_width = 700
         Window.minimum_height = 400
 
-        # Window.size = (700, 400)
-        # Window.fullscreen = 'auto'
-        # Window.borderless = True
-        Window.maximize()
+        if DEBUG:
+            Window.size = (700, 400)
+            # Window.fullscreen = 'auto'
+            # Window.borderless = True
+        else:
+            Window.maximize()
         return self.screen
 
     def on_start(self):
         self.bind_ui()
         self._tasks = asyncio.gather(
-            asyncio.create_task(self.watchdog()),
             asyncio.create_task(self.tcp_polling()),
-            asyncio.create_task(self.update_texture())
+            asyncio.create_task(self.update_texture()),
+            asyncio.create_task(self.rtsp_stream_task())  # Added RTSP stream task
         )
 
-    async def watchdog(self):
-        await self.status("Initializing...")
+    async def rtsp_stream_task(self):
         while True:
-            # print(f"TCP connected: {self.tcp.sock_connected}, RTSP status: {self.rtsp.status}")
-            if self.tcp.sock_connected:
-                if self.rtsp.status != 'working' and not self.rtsp_task:
-                    print("Starting RTSP stream")
-                    self.rtsp_task = asyncio.create_task(self.start_stream())
-            else:
-                await self.stop_stream()
-            await asyncio.sleep(1 / 4)
+            if self.rtsp.status != 'working':
+                print("RTSP stream error detected or stopped, attempting to restart")
+                await self.rtsp.start()
+            await asyncio.sleep(2)
 
     def resize_frame(self, frame):
-        # Get the dimensions of the widget
         widget_width, widget_height = self.image.width, self.image.height
-
-        # Get the dimensions of the frame
         frame_height, frame_width = frame.shape[:2]
-
-        # Calculate the aspect ratio of the frame
         aspect_ratio = frame_width / frame_height
 
-        # Calculate the new dimensions while maintaining the aspect ratio
         if widget_width / widget_height > aspect_ratio:
             new_height = int(widget_height)
             new_width = int(widget_height * aspect_ratio)
@@ -151,7 +144,6 @@ class StreamApp(MDApp):
             new_width = int(widget_width)
             new_height = int(widget_width / aspect_ratio)
 
-        # Resize the frame to the new dimensions
         resized_frame = cv2.resize(frame, (new_width, new_height))
         return resized_frame
 
@@ -159,7 +151,7 @@ class StreamApp(MDApp):
         while True:
             if self.rtsp.frame is not None:
                 await self.show_stream_widget()
-                resized_frame = self.resize_frame(self.rtsp.frame)  # Resize frame to widget size
+                resized_frame = self.resize_frame(self.rtsp.frame)
                 buf = resized_frame.tobytes()
                 texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='rgb')
                 texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
@@ -170,16 +162,12 @@ class StreamApp(MDApp):
                 await self.hide_stream_widget()
                 await asyncio.sleep(1)
 
-
     async def start_stream(self):
         await self.rtsp.start()
 
     async def stop_stream(self):
         if self.rtsp.status == 'working':
             await self.rtsp.stop()
-        if self.rtsp_task:
-            self.rtsp_task.cancel()
-            self.rtsp_task = None
         self.tcp.close()
 
     async def show_stream_widget(self):
@@ -257,11 +245,7 @@ class StreamApp(MDApp):
             await self.on_record_stop()
 
     def on_stop(self):
-        if self.rtsp._task is not None:
-            self.rtsp.stop()
-            self.rtsp._task.cancel()
         self.tcp.close()
-        # self._tasks.cancel()
 
 
 async def main():
@@ -284,14 +268,20 @@ if __name__ == '__main__':
         cfg = tomllib.load(fp)
 
     DEBUG = cfg.get('DEBUG', False)
-    SERVER = cfg['server' if not DEBUG else 'debug-server']
+
+    SERVER = cfg['debug-server' if DEBUG else 'server']
 
     TCP_IP = SERVER['TCP_IP']
     TCP_PORT = SERVER['TCP_PORT']
     WS_PORT = SERVER['WS_PORT']
-    print(SERVER['WS_URI'])
     WS_URI = SERVER['WS_URI'].format(TCP_IP=TCP_IP, WS_PORT=WS_PORT)
     RTSP_URI = SERVER['RTSP_URI'].format(TCP_IP=TCP_IP)
     websocket.set_uri(WS_URI)
 
+    if DEBUG:
+        from modules import debug
+        debug.open_tcp(TCP_IP, TCP_PORT)
+        debug.open_vlc(RTSP_URI)
+
     asyncio.run(main())
+
