@@ -1,22 +1,9 @@
 import asyncio
-import subprocess
-import sys
-
+from modules.env import open_file_path
 from kivy.metrics import dp
+
 from kivymd.uix.snackbar import MDSnackbar, MDSnackbarSupportingText, MDSnackbarButtonContainer, \
-    MDSnackbarActionButton, MDSnackbarActionButtonText, MDSnackbarCloseButton, MDSnackbarText
-
-
-async def open_file_path(filepath):
-    if sys.platform == "win32":
-        # Use 'explorer' with '/select,' to highlight the file
-        subprocess.Popen(['explorer', '/select,', filepath])
-    elif sys.platform == "darwin":
-        # Use 'open' with '-R' to reveal the file in Finder
-        subprocess.Popen(['open', '-R', filepath])
-    else:
-        # On Linux, there is no standard way to highlight a file, just open the directory
-        subprocess.Popen(['xdg-open', filepath])
+    MDSnackbarActionButton, MDSnackbarActionButtonText, MDSnackbarText
 
 
 async def file_toast(text, path):
@@ -33,9 +20,6 @@ async def file_toast(text, path):
         ),
         MDSnackbarButtonContainer(
             action_button,
-            # MDSnackbarCloseButton(
-            #     icon="close",
-            # ),
             pos_hint={"center_y": 0.5}
         ),
         y=dp(24),

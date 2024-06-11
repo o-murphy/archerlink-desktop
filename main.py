@@ -1,26 +1,8 @@
 import asyncio
-import os
-import subprocess
-from datetime import datetime
 
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib
+from modules.env import *
 
 import cv2
-from kivy.config import Config
-from kivy import platform
-
-import sys
-from kivy.resources import resource_add_path
-
-from modules import MovRecorder, RTSPStreamer, file_toast
-from modules.control import websocket
-
-if platform == 'win' or platform == 'linux':
-    Config.set('graphics', 'maxfps', '120')
-    Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
 
 from kivy.core.window import Window
 from kivy.uix.image import Image
@@ -30,34 +12,11 @@ from kivy.lang import Builder
 from kivy.uix.screenmanager import Screen
 from kivymd.app import MDApp
 
-from modules.tcp import TCPClient
+from modules import MovRecorder, TCPClient, RTSPStreamer, file_toast
+from modules.control import websocket
 
-os.environ["KIVY_NO_CONSOLELOG"] = "1"
-# os.environ['KIVY_GL_BACKEND'] = 'angle_sdl2'
-ICO_PATH = 'icon.png'
-KVGUI_PATH = "gui.kv"
-CONFIG_PATH = "config.toml"
-
-if platform == 'win':
-    OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "AppData", "Local", "ArcherLink")
-else:
-    OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "Pictures", 'ArcherLink')
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-
-async def get_out_filename():
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    dt = datetime.now().strftime("%y%m%d-%H%M%S")
-    return os.path.join(OUTPUT_DIR, f"{dt}")
-
-
-async def open_output_dir():
-    if sys.platform == "win32":
-        os.startfile(OUTPUT_DIR)
-    elif sys.platform == "darwin":
-        subprocess.Popen(["open", OUTPUT_DIR])
-    else:
-        subprocess.Popen(["xdg-open", OUTPUT_DIR])
+Builder.load_file(KVGUI_PATH)
+websocket.set_uri(WS_URI)
 
 
 class MainScreen(Screen):
@@ -139,18 +98,7 @@ class StreamApp(MDApp):
 
     def resize_frame(self, frame):
         widget_width, widget_height = self.image.width, self.image.height
-        frame_height, frame_width = frame.shape[:2]
-        aspect_ratio = frame_width / frame_height
-
-        if widget_width / widget_height > aspect_ratio:
-            new_height = int(widget_height)
-            new_width = int(widget_height * aspect_ratio)
-        else:
-            new_width = int(widget_width)
-            new_height = int(widget_width / aspect_ratio)
-
-        resized_frame = cv2.resize(frame, (new_width, new_height))
-        return resized_frame
+        return self.rtsp.resize_frame(frame, widget_width, widget_height)
 
     async def update_texture(self):
         try:
@@ -267,37 +215,11 @@ class StreamApp(MDApp):
         await self.stop_stream()
         await asyncio.sleep(1)  # Give some time to complete the stopping process
 
+
 async def main():
     app = StreamApp()
     await app.async_run()
 
+
 if __name__ == '__main__':
-    if hasattr(sys, '_MEIPASS'):
-        resource_add_path(os.path.join(sys._MEIPASS))
-        ICO_PATH = os.path.join(sys._MEIPASS, ICO_PATH)
-        KVGUI_PATH = os.path.join(sys._MEIPASS, KVGUI_PATH)
-        CONFIG_PATH = os.path.join(sys._MEIPASS, CONFIG_PATH)
-
-    Config.set('kivy', 'window_icon', ICO_PATH)
-    Builder.load_file(KVGUI_PATH)
-
-    with open(CONFIG_PATH, 'rb') as fp:
-        cfg = tomllib.load(fp)
-
-    DEBUG = cfg.get('DEBUG', False)
-
-    SERVER = cfg['debug-server' if DEBUG else 'server']
-
-    TCP_IP = SERVER['TCP_IP']
-    TCP_PORT = SERVER['TCP_PORT']
-    WS_PORT = SERVER['WS_PORT']
-    WS_URI = SERVER['WS_URI'].format(TCP_IP=TCP_IP, WS_PORT=WS_PORT)
-    RTSP_URI = SERVER['RTSP_URI'].format(TCP_IP=TCP_IP)
-    websocket.set_uri(WS_URI)
-
-    if DEBUG:
-        from modules import debug
-        debug.open_tcp(TCP_IP, TCP_PORT)
-        debug.open_vlc(RTSP_URI)
-
     asyncio.run(main())

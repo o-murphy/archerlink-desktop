@@ -2,25 +2,19 @@ import subprocess
 import atexit
 
 from sys import platform
-import socket
 import asyncio
-
 import socket
-
-# Define host and port
-import time
 
 
 def open_vlc(rtsp_uri):
     if platform.startswith('win'):
         vlc_process = subprocess.Popen(r'"C:\Program Files\VideoLAN\VLC\vlc.exe" '
-                                       r'-vvv "screen://" --screen-fps=60 --sout '
+                                       r'-vvv "screen://" --screen-fps=50 --sout '
                                        r'"#transcode{vcodec=mp4v,vfilter=croppadd'
                                        r'{croptop=0,cropbottom=0,cropleft=0,cropright=0,'
                                        r'paddtop=0,paddbottom=0,paddleft=0,paddright=0},'
                                        r'width=1280,height=720,acodec=none}:'
                                        r'rtp{sdp='
-                                       # r'rtsp://:8554/test'
                                        fr'{rtsp_uri}'
                                        r'}" --no-sout-all --sout-keep')
 

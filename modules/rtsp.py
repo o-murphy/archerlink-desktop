@@ -24,7 +24,7 @@ class RTSPStreamer:
     def __init__(self, url, fake_stream=True):
         self.url = url
         self.container = None
-        self.fps = 60
+        self.fps = 50
         self.frame = None
         self.status = 'stopped'
         self._stop_event = asyncio.Event()
@@ -41,7 +41,6 @@ class RTSPStreamer:
 
     async def fake_stream(self):
         try:
-            self.fps = 60
             self.status = 'working'
             while not self._stop_event.is_set():
                 frame = _create_fake_frame(480, 640)
@@ -80,9 +79,9 @@ class RTSPStreamer:
             try:
                 print("Opening container")
                 self.container = await loop.run_in_executor(pool, av.open, self.url)
-                self.fps = self.container.streams.video[0].average_rate
-                if not self.fps:
-                    self.fps = 60
+                fps = self.container.streams.video[0].average_rate
+                if fps is not None:
+                    self.fps = fps
                 print(f"FPS: {self.fps}")
                 self.status = 'working'
                 print("Entering streaming loop")
@@ -129,3 +128,17 @@ class RTSPStreamer:
             self.container.close()
         self.status = 'stopped'
         print("Stream fully stopped.")
+
+    def resize_frame(self, frame, width, height):
+        frame_height, frame_width = frame.shape[:2]
+        aspect_ratio = frame_width / frame_height
+
+        if width / height > aspect_ratio:
+            new_height = int(height)
+            new_width = int(height * aspect_ratio)
+        else:
+            new_width = int(width)
+            new_height = int(width / aspect_ratio)
+
+        resized_frame = cv2.resize(frame, (new_width, new_height))
+        return resized_frame
