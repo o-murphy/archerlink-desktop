@@ -57,7 +57,8 @@ class RTSPStreamer:
         try:
             print(f"Opening RTSP stream: {self.rtsp_uri}")
             async with self._lock:
-                await asyncio.wait_for(self.initialize_player(), timeout=2)  # 10-second timeout for initializing the player
+                await asyncio.wait_for(self.initialize_player(), timeout=10)  # 10-second timeout for initializing the player
+            self.status = 'working'
             self.status = 'working'
             print("Entering streaming loop")
             while not self._stop_event.is_set():
@@ -97,3 +98,9 @@ class RTSPStreamer:
 
         resized_frame = cv2.resize(frame, (new_width, new_height))
         return resized_frame
+
+    async def shot(self, filename):
+        if self.frame is not None:
+            rgb_frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+            cv2.imwrite(filename + '.png', rgb_frame)
+            return filename + '.png'

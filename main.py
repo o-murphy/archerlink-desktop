@@ -151,8 +151,11 @@ class StreamApp(MDApp):
         await self.rtsp.start()
 
     async def stop_stream(self):
+        if self.tcp.sock_connected:
+            self.tcp.close()
         if self.rtsp.status == 'working':
             await self.rtsp.stop()
+            await asyncio.sleep(1)
 
     async def show_stream_widget(self):
         if self.image not in self.center_column.children:
@@ -186,7 +189,6 @@ class StreamApp(MDApp):
                 while not self.tcp.sock_connected:
                     res = await self.tcp.connect()
                     if not res:
-                        await asyncio.sleep(1)
                         await asyncio.sleep(1)
 
                 while self.tcp.sock_connected:
