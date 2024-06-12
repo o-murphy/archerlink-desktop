@@ -27,7 +27,7 @@ class MovRecorder:
         self._error = None
         try:
             self.output_container = av.open(self.filename, mode='w')
-            stream = self.output_container.add_stream('h264', rate=self.rtsp.fps)
+            stream = self.output_container.add_stream('h264', rate=self.rtsp._fps)
             height, width, _ = self.rtsp.frame.shape
             stream.width = width
             stream.height = height
@@ -35,7 +35,7 @@ class MovRecorder:
 
             while self.recording:
                 # Simulate a small delay to avoid blocking the event loop
-                await asyncio.sleep(1 / self.rtsp.fps)
+                await asyncio.sleep(1 / self.rtsp._fps)
 
                 if self.rtsp.frame is None:
                     continue  # Skip if no frame is available

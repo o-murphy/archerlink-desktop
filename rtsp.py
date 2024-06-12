@@ -27,11 +27,23 @@ class RTSPClient:
         self.port = port
         self.path = path
         self.options = options
-        self.player: [MediaPlayer, None] = None
-        self.socket: [socket, None] = None
-        self.fps = 50  # default
-        self.frame = None
-        self.status = RTSPClient.Status.Stopped
+        self.__player: [MediaPlayer, None] = None
+        self.__socket: [socket, None] = None
+        self.__fps = 50  # default
+        self.__frame = None
+        self.__status = RTSPClient.Status.Stopped
+
+    @property
+    def frame(self):
+        return self.__frame
+
+    @property
+    def status(self):
+        return self.__status
+
+    @property
+    def fps(self):
+        return self.__fps
 
     @property
     def url(self) -> str:
@@ -39,29 +51,37 @@ class RTSPClient:
         path = self.path
         return f"rtsp://{self.address}{f':{port}' if port else ''}{path if path else ''}"
 
-    async def _get_fps(self):
-        if self.player:
-            container = self.player.__dict__.get("_MediaPlayer__container", None)
+    @property
+    def _player(self):
+        return self.__player
+
+    @property
+    def _socket(self):
+        return self.__socket
+
+    async def _get_stream_fps(self):
+        if self.__player:
+            container = self.__player.__dict__.get("_MediaPlayer__container", None)
             if container:
                 stream = container.streams.video[0]
                 fps = stream.average_rate
                 if fps:
-                    self.fps = fps
+                    self.__fps = fps
                 else:
                     _log.warning(f"Stream FPS not available, adjusted to default")
-                _log.info(f"Stream FPS: {self.fps}")
+                _log.info(f"Stream FPS: {self.__fps}")
             else:
                 _log.info("No container available to retrieve FPS")
 
     async def _open(self):
         while True:
             try:
-                self.socket = init_socket()
-                self.player = MediaPlayer(file=self.url,
-                                          format='rtsp',
-                                          options=self.options,
-                                          timeout=2)
-                await self._get_fps()
+                self.__socket = init_socket()
+                self.__player = MediaPlayer(file=self.url,
+                                            format='rtsp',
+                                            options=self.options,
+                                            timeout=2)
+                await self._get_stream_fps()
                 break
             except ConnectionError as e:
                 _log.error(f"Failed to connect: {e}")
@@ -71,17 +91,17 @@ class RTSPClient:
                 await asyncio.sleep(1)
 
     async def _close(self):
-        if self.player:
-            self.player.video.stop()
-            self.player = None
-        self.frame = None
-        if self.socket is not None:
-            self.socket.close()
-            self.socket = None
-        self.status = RTSPClient.Status.Stopped
+        if self.__player:
+            self.__player.video.stop()
+            self.__player = None
+        self.__frame = None
+        if self.__socket is not None:
+            self.__socket.close()
+            self.__socket = None
+        self.__status = RTSPClient.Status.Stopped
 
     async def _reconnect(self):
-        if self.player is None:
+        if self.__player is None:
             _log.info("Connecting...")
         else:
             _log.info("Connection lost, Reconnecting...")
@@ -94,32 +114,32 @@ class RTSPClient:
             await self._reconnect()
             while True:
                 try:
-                    if self.player and self.player.video:
-                        frame = await self.player.video.recv()
+                    if self.__player and self.__player.video:
+                        frame = await self.__player.video.recv()
                         if frame:
-                            self.status = RTSPClient.Status.Running
-                            self.frame = frame.to_ndarray(format="bgr24")
-                            cv2.imshow("RTSP Stream", self.frame)
+                            self.__status = RTSPClient.Status.Running
+                            self.__frame = frame.to_ndarray(format="bgr24")
+                            cv2.imshow("RTSP Stream", self.__frame)
                             if cv2.waitKey(1) & 0xFF == ord('q'):
                                 break
                         else:
                             _log.warning("No frame received")
-                            self.frame = None
+                            self.__frame = None
                         await asyncio.sleep(1 / 50)  # Allow other tasks to run
                     else:
                         raise ConnectionError("No player connected")
                 except (ConnectionError, av.AVError, MediaStreamError) as e:
-                    self.status = RTSPClient.Status.Error
+                    self.__status = RTSPClient.Status.Error
                     _log.error(e)
                     cv2.destroyAllWindows()
                     await asyncio.sleep(2)
                     await self._reconnect()
                 except Exception as e:
-                    self.status = RTSPClient.Status.Error
+                    self.__status = RTSPClient.Status.Error
                     _log.exception(e)
-                    # cv2.destroyAllWindows()
-                    # await asyncio.sleep(2)
-                    # await self._reconnect()
+                    cv2.destroyAllWindows()
+                    await asyncio.sleep(2)
+                    await self._reconnect()
         except asyncio.CancelledError:
             _log.debug("RTSP client canceled")
         finally:
@@ -155,7 +175,9 @@ async def main():
     try:
         await task
     except asyncio.CancelledError:
-        print("RTSP client task successfully canceled")
+        _log.debug("RTSP client task successfully canceled")
+    finally:
+        _log.debug("RTSP client task successfully finished")
 
 
 if __name__ == "__main__":
