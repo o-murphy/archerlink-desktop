@@ -48,7 +48,6 @@ class StreamApp(MDApp):
         )
         self.rtsp = RTSPStreamer(
             rtsp_uri=RTSP_URI,
-            fake_stream=False
         )
         self.recorder = MovRecorder(self.rtsp, self.on_record_stop)
         self._tasks = []
