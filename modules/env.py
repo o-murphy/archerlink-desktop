@@ -36,31 +36,30 @@ else:
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
-TCP_IP = '192.168.100.1'
-TCP_PORT = 8888
-WS_PORT = 8080
-WS_URI = 'ws://{TCP_IP}:{WS_PORT}/websocket'
-RTSP_URI = 'rtsp://{TCP_IP}/stream0'
+# TCP_IP = '192.168.100.1'
+# TCP_PORT = 8888
+# WS_PORT = 8080
+# WS_URI = f'ws://{TCP_IP}:{WS_PORT}/websocket'
+# RTSP_URI = f'rtsp://{TCP_IP}/stream0'
 
-if not hasattr(sys, '_MEIPASS'):
-    with open(CONFIG_PATH, 'rb') as fp:
-        cfg = tomllib.load(fp)
+# if not hasattr(sys, '_MEIPASS'):
+with open(CONFIG_PATH, 'rb') as fp:
+    cfg = tomllib.load(fp)
 
-    DEBUG = cfg.get('DEBUG', False)
+DEBUG = cfg.get('DEBUG', False)
 
-    if DEBUG:
-        SERVER = cfg['debug-server' if DEBUG else 'server']
+SERVER = cfg['debug-server' if DEBUG else 'server']
 
-        TCP_IP = SERVER['TCP_IP']
-        TCP_PORT = SERVER['TCP_PORT']
-        WS_PORT = SERVER['WS_PORT']
-        WS_URI = SERVER['WS_URI'].format(TCP_IP=TCP_IP, WS_PORT=WS_PORT)
-        RTSP_URI = SERVER['RTSP_URI'].format(TCP_IP=TCP_IP)
+TCP_IP = SERVER['TCP_IP']
+TCP_PORT = SERVER['TCP_PORT']
+WS_PORT = SERVER['WS_PORT']
+WS_URI = SERVER['WS_URI'].format(TCP_IP=TCP_IP, WS_PORT=WS_PORT)
+RTSP_URI = SERVER['RTSP_URI'].format(TCP_IP=TCP_IP)
 
-        from modules import debug
-
-        debug.open_tcp(TCP_IP, TCP_PORT)
-        debug.open_vlc(RTSP_URI)
+if DEBUG:
+    from modules import debug
+    debug.open_tcp(TCP_IP, TCP_PORT)
+    debug.open_vlc(RTSP_URI)
 
 
 async def get_out_filename():
