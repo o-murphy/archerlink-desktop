@@ -8,14 +8,12 @@ from aiortc.contrib.media import MediaPlayer
 from aiortc.mediastreams import MediaStreamError
 import logging
 
-
 logging.basicConfig(level=logging.DEBUG)
 _log = logging.getLogger('RTSP')
 _log.setLevel(logging.DEBUG)
 
 
 class RTSPClient:
-
     class Status(Enum):
         Running = "Running"
         Stopped = "Stopped"
@@ -125,7 +123,7 @@ class RTSPClient:
                         else:
                             _log.warning("No frame received")
                             self.__frame = None
-                        await asyncio.sleep(1 / 50)  # Allow other tasks to run
+                        await asyncio.sleep(1 / self.fps)  # Allow other tasks to run
                     else:
                         raise ConnectionError("No player connected")
                 except (ConnectionError, av.AVError, MediaStreamError) as e:
