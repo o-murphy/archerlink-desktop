@@ -1,3 +1,7 @@
+# import faulthandler
+#
+# faulthandler.enable()
+
 import asyncio
 
 from kivy.core.window import Window
