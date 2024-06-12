@@ -1,6 +1,6 @@
 # ArcherLink config
 
-DEBUG = false
+DEBUG = true
 
 [debug-server]
 TCP_IP = '127.0.0.1'
