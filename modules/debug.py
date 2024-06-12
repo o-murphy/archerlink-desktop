@@ -26,22 +26,21 @@ def open_vlc(rtsp_uri):
         atexit.register(cleanup)
 
 
-def open_tcp(host, port):
-    def run_tcp_server(host, port):
-        while True:
+def run_tcp_server(host, port, stop_event):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((host, port))
+        s.listen()
+        print(f"Server is listening on {host}:{port}")
+
+        while not stop_event.is_set():
+            s.settimeout(1.0)  # Set timeout for non-blocking accept
             try:
-                # Create a TCP/IP socket
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    # Bind the socket to the address and port
-                    s.bind((host, port))
-                    # Listen for incoming connections
-                    s.listen()
-                    print(f"Server is listening on {host}:{port}")
-                    # Accept incoming connections
-                    conn, addr = s.accept()
-                    with conn:
-                        print(f"Connected by {addr}")
-                        while True:
+                conn, addr = s.accept()
+                with conn:
+                    print(f"Connected by {addr}")
+                    while not stop_event.is_set():
+                        conn.settimeout(1.0)  # Set timeout for non-blocking recv
+                        try:
                             # Receive data from the client
                             data = conn.recv(1024)
                             if not data:
@@ -56,7 +55,22 @@ def open_tcp(host, port):
                                 # Echo back the received data
                                 conn.sendall(data)
                             time.sleep(5)
+                        except socket.timeout:
+                            continue
+            except socket.timeout:
+                continue
             except ConnectionError:
                 pass
-    tcp_thread = threading.Thread(target=run_tcp_server, args=(host, port), daemon=True)
+    print("Server is shutting down.")
+
+
+def open_tcp(host, port):
+    stop_event = threading.Event()
+    tcp_thread = threading.Thread(target=run_tcp_server, args=(host, port, stop_event), daemon=True)
     tcp_thread.start()
+
+    def cleanup():
+        stop_event.set()
+        tcp_thread.join()
+
+    atexit.register(cleanup)
