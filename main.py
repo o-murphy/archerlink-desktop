@@ -244,6 +244,7 @@ class StreamApp(MDApp):
         asyncio.create_task(self.cleanup())
 
     async def cleanup(self):
+        self.tcp.close()
         for task in self._tasks:
             task.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
