@@ -1,0 +1,48 @@
+# hook-av.py
+import os
+from PyInstaller.utils.hooks import collect_dynamic_libs
+
+# Collect all DLLs from av.libs
+binaries = collect_dynamic_libs('av.libs')
+
+# Define a list of DLLs to exclude
+exclude_dlls = [
+    'libaom-70df9c41aa10733e0497657379359496.dll',
+    'libass-9-eec2614a525d8dd3c69c893cec95e434.dll',
+    'libbluray-2-2be3cd6759af4949b0fb87aa45caf060.dll',
+    'libdav1d-15547904df363260a59d0648e504163e.dll',
+    'libfontconfig-1-0a822343a5135035defaca96f32d9a0c.dll',
+    'libfreetype-6-3e24ef05a97ae269cec5ae5aad333723.dll',
+    'libfribidi-0-ad77492818f493b65801a1dac652c367.dll',
+    'libgcc_s_seh-1-de5143c78c7ed791218a659022bc38f5.dll',
+    'libgmp-10-0d20aafb55bb0e3017f8a8a3245d95e8.dll',
+    'libharfbuzz-0-3d6a90d5c013780f8ed2b6bf1153fedf.dll',
+    'libiconv-2-6a93ec6956a48a8e5f637f61ff659f60.dll',
+    'liblzma-5-cb2270206b51b6a1239618c8fa3a8249.dll',
+    'libmp3lame-0-27102ea40aba42ddf338d39f663d2b68.dll',
+    'libogg-0-6f6e5b5629d619fde36f9a92541355a0.dll',
+    'libopencore-amrnb-0-e2bafc3baf556cfdf6427fc7658b16d4.dll',
+    'libopencore-amrwb-0-d53e87af1e74c5d806e741233f8262a2.dll',
+    'libopenjp2-84a63403cdddcaa1727c3d8a08d89a7c.dll',
+    'libopus-0-9832974b3694c52fb65d9f62d23fdcee.dll',
+    'libpng16-16-7c94a3fb1bf2fa9d18a033e98d841345.dll',
+    'libsharpyuv-7064dbb5fb8adc69e5c92d2190516c35.dll',
+    'libspeex-1-cc1c39f528d993f2effd1293d3fa3611.dll',
+    'libstdc++-6-14977f140772fbfb6a8b5992ec7ead49.dll',
+    'libtwolame-0-7987df6e76df205d2f91d28f4cac3933.dll',
+    'libvorbis-0-edabcb67b3131465bf267e49a38af57b.dll',
+    'libvorbisenc-2-2c299b0222cd6fad2bcdeaa199394b3c.dll',
+    'libvpx-1-7ae7e6b102bc4c9fe00f9c37ce406938.dll',
+    'libwebp-7798b7b3009e908089727101d5a80a9c.dll',
+    'libwebpmux-cbe802c26626e0013a5bf1cc096890bd.dll',
+    'libwinpthread-1-033b18beff0985f7d066ceae859fa987.dll',
+    'libx264-164-9273570c3f8af033faf6f9299e0f8e93.dll',
+    'libx265-fd9ddf38ef624d29c298d6e3ec6c7069.dll',
+    'libxml2-2-24614a02d56f8b746abd9f78157f9506.dll',
+    'postproc-57-62664372cf60333601d4fb2b1ff33448.dll',
+    'libzlib1-07fe689d78a6ad58b7b04fc38884c858.dll',
+    'xvidcore-244c0082988a56b307964f0430599461.dll'
+]
+
+# Filter out the DLLs to exclude
+binaries = [b for b in binaries if os.path.basename(b[1]) not in exclude_dlls]
