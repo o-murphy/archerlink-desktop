@@ -11,7 +11,7 @@ from kivy.uix.image import Image
 from kivy.uix.screenmanager import Screen
 from kivymd.app import MDApp
 
-from modules import MovRecorder, TCPClient, RTSPStreamer, file_toast
+from modules import MovRecorder, TCPClient, RTSPClient, file_toast
 from modules.control import websocket
 from modules.env import *
 
@@ -41,14 +41,8 @@ class StreamApp(MDApp):
         self.placeholder = self.screen.ids.placeholder
         self.image = Image()
 
-        self.tcp = TCPClient(
-            server_ip=TCP_IP,
-            server_port=TCP_PORT,
-            command='CMD_RTSP_TRANS_START',
-        )
-        self.rtsp = RTSPStreamer(
-            rtsp_uri=RTSP_URI,
-            fake_stream=False
+        self.rtsp = RTSPClient(
+            TCP_IP, TCP_PORT, RTSP_URI, AV_OPTIONS
         )
         self.recorder = MovRecorder(self.rtsp, self.on_record_stop)
         self._tasks = []
@@ -83,48 +77,8 @@ class StreamApp(MDApp):
     def on_start(self):
         self.bind_ui()
         self._tasks = [
-            asyncio.create_task(self.watchdog()),
-            asyncio.create_task(self.tcp_polling()),
             asyncio.create_task(self.update_texture()),
-            asyncio.create_task(self.rtsp_stream_task())
         ]
-
-    async def watchdog(self):
-        try:
-            i = 0
-
-            async def spin(msg):
-                nonlocal i
-                await self.status(msg + "." * i + " " * (3 - i))
-                i += 1
-                if i >= 4:
-                    i = 0
-                await asyncio.sleep(0)
-
-            while True:
-                if not (cur_state := self.tcp.sock_connected):
-                    await spin("Device not connected")
-                else:
-                    if not (cur_state := self.rtsp.status == "working"):
-                        await spin("Trying to get stream")
-                await asyncio.sleep(0.5)
-        except asyncio.CancelledError:
-            print("Watchdog cancelled")
-        finally:
-            print("Watchdog finally closed")
-
-    async def rtsp_stream_task(self):
-        try:
-            while True:
-                if self.rtsp.status != 'working' and self.tcp.sock_connected:
-                    print("RTSP stream error detected or stopped, attempting to restart")
-                    await self.start_stream()
-                await asyncio.sleep(2)
-        except asyncio.CancelledError:
-            print("RTSP stream task cancelled")
-        finally:
-            print("RTSP stream task finalizing")
-            await self.stop_stream()
 
     def resize_frame(self, frame):
         widget_width, widget_height = self.image.width, self.image.height
@@ -133,27 +87,20 @@ class StreamApp(MDApp):
     async def update_texture(self):
         try:
             while True:
-                if self.rtsp.frame is not None and self.rtsp.status == 'working':
-                    resized_frame = self.resize_frame(self.rtsp.frame)
-                    buf = resized_frame.tobytes()
-                    texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='rgb')
-                    texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
-                    self.image.texture = texture
-                    self.image.canvas.ask_update()
-                    await self.show_stream_widget()
-                    await asyncio.sleep(1 / self.rtsp.fps)
-                else:
-                    await self.hide_stream_widget()
+                # if self.rtsp.frame is not None and self.rtsp.status == 'working':
+                #     resized_frame = self.resize_frame(self.rtsp.frame)
+                #     buf = resized_frame.tobytes()
+                #     texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='rgb')
+                #     texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
+                #     self.image.texture = texture
+                #     self.image.canvas.ask_update()
+                #     await self.show_stream_widget()
+                #     await asyncio.sleep(1 / self.rtsp.fps)
+                # else:
+                #     await self.hide_stream_widget()
                     await asyncio.sleep(1)
         except asyncio.CancelledError:
             print("Update texture task cancelled")
-
-    async def start_stream(self):
-        await self.rtsp.start()
-
-    async def stop_stream(self):
-        if self.rtsp.status == 'working':
-            await self.rtsp.stop()
 
     async def show_stream_widget(self):
         if self.image not in self.center_column.children:
@@ -180,23 +127,6 @@ class StreamApp(MDApp):
 
     async def status(self, message):
         self.placeholder.text = message
-
-    async def tcp_polling(self):
-        try:
-            while True:
-                while not self.tcp.sock_connected:
-                    res = await self.tcp.connect()
-                    if not res:
-                        await asyncio.sleep(1)
-                        await asyncio.sleep(1)
-
-                while self.tcp.sock_connected:
-                    await self.tcp.check_socket()
-                    await asyncio.sleep(5)
-        except asyncio.CancelledError:
-            print("TCP polling task cancelled")
-        finally:
-            print("TCP polling finalized")
 
     async def on_shot_button(self):
         filename = await get_out_filename()
@@ -231,11 +161,9 @@ class StreamApp(MDApp):
         asyncio.run_coroutine_threadsafe(self.cleanup(), asyncio.get_event_loop())
 
     async def cleanup(self):
-        self.tcp.close()
         for task in self._tasks:
             task.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
-        await self.stop_stream()
         await asyncio.sleep(1)  # Give some time to complete the stopping process
 
 

@@ -15,3 +15,11 @@ TCP_PORT = 8888
 WS_PORT = 8080
 WS_URI = 'ws://{TCP_IP}:{WS_PORT}/websocket'
 RTSP_URI = 'rtsp://{TCP_IP}/stream0'
+
+[av-options]
+rtsp_transport = "udp"  # Use UDP transport for lower latency
+fflags = "nobuffer"
+max_delay = "500000"  # 500ms max delay
+tune = "zerolatency"
+analyzeduration = "0"  # Skip analysis for lower latency
+probesize = "32"  # Lower probe size for faster start

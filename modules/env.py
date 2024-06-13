@@ -55,6 +55,7 @@ TCP_PORT = SERVER['TCP_PORT']
 WS_PORT = SERVER['WS_PORT']
 WS_URI = SERVER['WS_URI'].format(TCP_IP=TCP_IP, WS_PORT=WS_PORT)
 RTSP_URI = SERVER['RTSP_URI'].format(TCP_IP=TCP_IP)
+AV_OPTIONS = cfg['av-options']
 
 if DEBUG:
     from modules import debug
@@ -98,6 +99,7 @@ __all__ = (
     'WS_PORT',
     'WS_URI',
     'RTSP_URI',
+    'AV_OPTIONS',
     'get_out_filename',
     'open_output_dir',
     'open_file_path',

@@ -3,14 +3,14 @@ import socket
 # Define host and port
 import time
 
-HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
+HOST = '127.0.0.1'  # Standard loopback interface host (localhost)
 PORT = 8888        # Port to listen on (non-privileged ports are > 1023)
 
 while True:
     try:
         # Create a TCP/IP socket
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            # Bind the socket to the address and port
+            # Bind the socket to the host and port
             s.bind((HOST, PORT))
             # Listen for incoming connections
             s.listen()
