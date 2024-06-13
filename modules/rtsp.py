@@ -3,6 +3,7 @@ import logging
 import socket
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 
 import av
@@ -32,6 +33,7 @@ class RTSPClient:
         self.__fps = 50  # default
         self.__frame = None
         self.__status = RTSPClient.Status.Stopped
+        self._stop_event = asyncio.Event()
 
     @property
     def frame(self):
@@ -109,16 +111,18 @@ class RTSPClient:
         try:
             _log.info("Running RTSP client")
             await self._reconnect()
-            while True:
+            while not self._stop_event.is_set():
                 try:
                     if self.__player and self.__player.video:
                         frame = await self.__player.video.recv()
                         if frame:
                             self.__status = RTSPClient.Status.Running
-                            self.__frame = frame.to_ndarray(format="bgr24")
+                            frame = frame.to_ndarray(format="bgr24")
+                            self.__frame = cv2.flip(frame, 0)
                             # cv2.imshow("RTSP Stream", self.__frame)
                             # if cv2.waitKey(1) & 0xFF == ord('q'):
                             #     break
+                            # _log.debug("Frame received and updated")
                         else:
                             _log.warning("No frame received")
                             self.__frame = None
@@ -141,8 +145,21 @@ class RTSPClient:
             await self._close()
             _log.debug("RTSP client finalized")
 
+    def _run_async_in_thread(self):
+        asyncio.run(self.run_async())
+
+    async def stop(self):
+        self._stop_event.set()
+        await self._close()
+
+    async def run_in_executor(self):
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor() as executor:
+            await loop.run_in_executor(executor, asyncio.run, self.run_async())
+
+
     @staticmethod
-    def resize_frame(frame, width, height):
+    async def resize_frame(frame, width, height):
         frame_height, frame_width = frame.shape[:2]
         aspect_ratio = frame_width / frame_height
 
@@ -154,6 +171,7 @@ class RTSPClient:
             new_height = int(width / aspect_ratio)
 
         resized_frame = cv2.resize(frame, (new_width, new_height))
+        # await asyncio.sleep(0)
         return resized_frame
 
     async def shot(self, filename):

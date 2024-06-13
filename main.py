@@ -78,26 +78,37 @@ class StreamApp(MDApp):
         self.bind_ui()
         self._tasks = [
             asyncio.create_task(self.update_texture()),
-            asyncio.create_task(self.rtsp.run_async())
+            asyncio.create_task(self.rtsp.run_in_executor())
         ]
 
-    def adjust_frame(self, frame):
+    async def adjust_frame(self, frame):
         widget_width, widget_height = self.image.width, self.image.height
-        return self.rtsp.resize_frame(frame, widget_width, widget_height)
+        return await self.rtsp.resize_frame(frame, widget_width, widget_height)
 
     async def update_texture(self):
         try:
             while True:
-                if self.rtsp.frame is not None and self.rtsp.status == RTSPClient.Status.Running:
-                    resized_frame = self.adjust_frame(self.rtsp.frame)
-                    buf = resized_frame.tobytes()
-                    texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='rgb')
-                    texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
-                    self.image.texture = texture
-                    self.image.canvas.ask_update()
-                    await self.show_stream_widget()
+                if self.rtsp.status == RTSPClient.Status.Running:
+                    # print("RTSP Client Running")
+                    # print(f"Frame is not None: {self.rtsp.frame is not None}")
+                    if (frame := self.rtsp.frame) is not None:
+                        # print("Processing frame")
+                        try:
+                            resized_frame = await self.adjust_frame(frame)
+                            # print("Frame resized")
+                            buf = resized_frame.tobytes()
+                            # print("Frame converted to bytes")
+                            texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='bgr')
+                            texture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
+                            self.image.texture = texture
+                            # print("Texture updated")
+                            # self.image.canvas.ask_update()
+                        except Exception as e:
+                            print(f"Error processing frame: {e}")
+                        await self.show_stream_widget()
                     await asyncio.sleep(1 / self.rtsp.fps)
                 else:
+                    print("RTSP Client Not Running")
                     await self.hide_stream_widget()
                     await asyncio.sleep(1)
         except asyncio.CancelledError:
@@ -159,13 +170,18 @@ class StreamApp(MDApp):
             await self.on_record_stop()
 
     def on_stop(self):
-        asyncio.run_coroutine_threadsafe(self.cleanup(), asyncio.get_event_loop())
+        asyncio.run(self.cleanup())
 
     async def cleanup(self):
         for task in self._tasks:
             task.cancel()
-        await asyncio.gather(*self._tasks, return_exceptions=True)
-        await asyncio.sleep(1)  # Give some time to complete the stopping process
+        try:
+            await asyncio.gather(*self._tasks, return_exceptions=True)
+        except asyncio.CancelledError:
+            print("App tasks cancelled")
+        finally:
+            await self.rtsp.stop()
+            print("All tasks finalized and resources cleaned up")
 
 
 async def main():
