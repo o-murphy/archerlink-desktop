@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import socket
 import subprocess
 import sys
@@ -71,7 +72,7 @@ class RTSPClient:
                 _log.info("No container available to retrieve FPS")
 
     async def _open(self):
-        while True:
+        while not self._stop_event.is_set():
             try:
                 if self.host and self.port:
                     self.__socket = init_socket(self.host, self.port)
@@ -214,9 +215,10 @@ def ping(host):
     # Building the command. Ex: "ping -c 1 google.com"
     command = ['ping', param, '1', host]
     # Redirect output and error streams to DEVNULL to suppress them
-    with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as process:
-        stdout, stderr = process.communicate()
-        return process.returncode == 0
+    # with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as process:
+    #     stdout, stderr = process.communicate()
+    #     return process.returncode == 0
+    return os.system(" ".join(command)) == 0
 
 
 async def main():

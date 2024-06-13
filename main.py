@@ -51,7 +51,7 @@ class ArcherLink(MDApp):
         self.rtsp = RTSPClient(
             TCP_IP, TCP_PORT, RTSP_URI, AV_OPTIONS
         )
-        self.recorder = MovRecorder(self.rtsp, self.on_record_stop)
+        self.recorder = MovRecorder(self.rtsp, self.on_rec_stop)
         self._tasks = []
 
     def bind_ui(self):
@@ -116,9 +116,9 @@ class ArcherLink(MDApp):
                         await self.show_stream_widget()
                     await asyncio.sleep(1 / self.rtsp.fps)
                 else:
-                    _log.info("RTSP Client Not Running")
+                    # _log.info("RTSP Client Not Running")
                     await self.hide_stream_widget()
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.5)
         except asyncio.CancelledError:
             _log.info("Update texture task cancelled")
 
@@ -149,33 +149,36 @@ class ArcherLink(MDApp):
         self.placeholder.text = message
 
     async def on_shot_button(self):
-        filename = await get_out_filename()
+        filename = await get_output_filename()
         if self.rtsp.status == RTSPClient.Status.Running:
             filename = await self.rtsp.shot(filename)
             await file_toast(f"Photo saved to\n{filename}", filename)
 
-    async def start_recording(self):
-        fname = await get_out_filename()
-        await self.recorder.start_async_recording(fname)
-
-    async def on_record_stop(self):
+    async def on_rec_stop(self):
         button = self.root.ids.rec_btn
         icon = self.root.ids.rec_btn_icon
         button.color_map = "surface"
         icon.text_color = self.theme_cls.primaryColor
+
+        # if self.recorder.s
         filename, err = await self.recorder.stop_recording()
         if not err:
-            await file_toast(f"Video saved to\n{self.recorder.filename}", filename)
+            await file_toast(f"Video saved to\n{self.recorder.filename}", self.recorder.filename)
 
-    async def on_rec_button(self):
+    async def on_rec_start(self):
         button = self.root.ids.rec_btn
         icon = self.root.ids.rec_btn_icon
-        if not self.recorder.recording:
-            button.color_map = "tertiary"
-            icon.text_color = self.theme_cls.onErrorColor
-            await self.start_recording()
+        button.color_map = "tertiary"
+        icon.text_color = self.theme_cls.onErrorColor
+        filename = await get_output_filename()
+        _log.info("Starting recording")
+        await self.recorder.start_async_recording(filename)
+
+    async def on_rec_button(self):
+        if not self.recorder.recording and self.rtsp.status == RTSPClient.Status.Running:
+            await self.on_rec_start()
         else:
-            await self.on_record_stop()
+            await self.on_rec_stop()
 
     async def cleanup(self):
         for task in self._tasks:

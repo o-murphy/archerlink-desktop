@@ -63,7 +63,7 @@ if DEBUG:
     debug.open_vlc(RTSP_URI)
 
 
-async def get_out_filename():
+async def get_output_filename():
     dt = datetime.now().strftime("%y%m%d-%H%M%S")
     return os.path.join(OUTPUT_DIR, f"{dt}")
 
@@ -100,7 +100,7 @@ __all__ = (
     'WS_URI',
     'RTSP_URI',
     'AV_OPTIONS',
-    'get_out_filename',
+    'get_output_filename',
     'open_output_dir',
     'open_file_path',
 )
