@@ -1,10 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 from kivy_deps import sdl2, glew
-from kivy.tools.packaging.pyinstaller_hooks import get_deps_minimal, get_deps_all, hookspath, runtime_hooks
+from kivy.tools.packaging.pyinstaller_hooks import get_deps_minimal, get_deps_all, hookspath as kv_hooks, runtime_hooks
 
 # analyse = {**get_deps_minimal(video=None, audio=None)}
 # analyse[hiddenimports] += ['pkg_resources.extern', ]
+
+hookspath = kv_hooks() + ['./__pyinstaller']
 
 a = Analysis(
     ['main.py'],
@@ -21,10 +23,15 @@ a = Analysis(
         'kivy.core.text.text_sdl2',
         'kivymd.icon_definitions',
     ],
-    hookspath=hookspath(),
+    hookspath=hookspath,
     hooksconfig={},
     runtime_hooks=runtime_hooks(),
-    excludes=[],
+    excludes=[
+        'Pillow',
+        'PIL',
+        'setuptools',
+        'wheel',
+    ],
     noarchive=False,
     # optimize=0,
 )
