@@ -1,8 +1,7 @@
-# import asyncio
 import logging
 
 import websockets
-import archer_protocol_pb2
+from . import archer_protocol_pb2
 
 # Set the logging level to WARNING to disable debug messages
 logging.getLogger('websockets').setLevel(logging.WARNING)

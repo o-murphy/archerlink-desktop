@@ -12,7 +12,8 @@ a = Analysis(
     binaries=[],
     datas=[
         ('gui.kv', '.'),
-        ('icon.png', '.')
+        ('icon.png', '.'),
+        ('config.toml', '.'),
     ],
     hiddenimports=[
         'pkg_resources.extern',
