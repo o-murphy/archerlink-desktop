@@ -123,11 +123,6 @@ class RTSPClient:
                         if frame:
                             self.__status = RTSPClient.Status.Running
                             self.__frame = frame.to_ndarray(format="bgr24")
-                            # self.__frame = cv2.flip(frame, 0)
-                            # cv2.imshow("RTSP Stream", self.__frame)
-                            # if cv2.waitKey(1) & 0xFF == ord('q'):
-                            #     break
-                            # _log.debug("Frame received and updated")
                         else:
                             _log.warning("No frame received")
                             self.__frame = None
@@ -141,7 +136,6 @@ class RTSPClient:
                 except Exception as e:
                     self.__status = RTSPClient.Status.Error
                     _log.exception(e)
-                # cv2.destroyAllWindows()
                 await asyncio.sleep(2)
                 await self._reconnect()
         except asyncio.CancelledError:
@@ -182,9 +176,8 @@ class RTSPClient:
         return resized_frame
 
     async def shot(self, filename):
-        if self.frame is not None:
-            rgb_frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
-            cv2.imwrite(filename + '.png', rgb_frame)
+        if (frame := self.frame) is not None:
+            cv2.imwrite(filename + '.png', frame)
             return filename + '.png'
 
 
