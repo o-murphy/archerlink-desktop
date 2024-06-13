@@ -10,7 +10,8 @@ import av
 import cv2
 from aiortc.contrib.media import MediaPlayer
 from aiortc.mediastreams import MediaStreamError
-from win32process import CREATE_NO_WINDOW
+
+CREATE_NO_WINDOW = 134217728  # from win32process import CREATE_NO_WINDOW
 
 logging.basicConfig(level=logging.DEBUG)
 _log = logging.getLogger('RTSP')

@@ -1,10 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import os
+from PyInstaller.utils.hooks import collect_dynamic_libs
 from kivy_deps import sdl2, glew
 from kivy.tools.packaging.pyinstaller_hooks import get_deps_minimal, get_deps_all, hookspath, runtime_hooks
 
 # analyse = {**get_deps_minimal(video=None, audio=None)}
 # analyse[hiddenimports] += ['pkg_resources.extern', ]
+
 
 a = Analysis(
     ['main.py'],
@@ -24,7 +27,11 @@ a = Analysis(
     hookspath=hookspath(),
     hooksconfig={},
     runtime_hooks=runtime_hooks(),
-    excludes=[],
+    excludes=[
+        'Pillow',
+        'setuptools',
+        'wheel',
+    ],
     noarchive=False,
     # optimize=0,
 )
