@@ -4,6 +4,7 @@
 
 import asyncio
 
+import cv2
 from kivy.core.window import Window
 from kivy.graphics.texture import Texture
 from kivy.lang import Builder
@@ -11,9 +12,15 @@ from kivy.uix.image import Image
 from kivy.uix.screenmanager import Screen
 from kivymd.app import MDApp
 
-from modules import MovRecorder, TCPClient, RTSPClient, file_toast
+
+import logging
+
+from modules import MovRecorder, RTSPClient, file_toast
 from modules.control import websocket
 from modules.env import *
+
+_log = logging.getLogger("ArcherLink")
+_log.setLevel(logging.DEBUG)
 
 Builder.load_file(KVGUI_PATH)
 websocket.set_uri(WS_URI)
@@ -30,7 +37,7 @@ class MainScreen(Screen):
     ...
 
 
-class StreamApp(MDApp):
+class ArcherLink(MDApp):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -94,6 +101,7 @@ class StreamApp(MDApp):
                     if (frame := self.rtsp.frame) is not None:
                         # print("Processing frame")
                         try:
+                            frame = cv2.flip(frame, 0)
                             resized_frame = await self.adjust_frame(frame)
                             # print("Frame resized")
                             buf = resized_frame.tobytes()
@@ -104,15 +112,15 @@ class StreamApp(MDApp):
                             # print("Texture updated")
                             # self.image.canvas.ask_update()
                         except Exception as e:
-                            print(f"Error processing frame: {e}")
+                            _log.info(f"Error processing frame: {e}")
                         await self.show_stream_widget()
                     await asyncio.sleep(1 / self.rtsp.fps)
                 else:
-                    print("RTSP Client Not Running")
+                    _log.info("RTSP Client Not Running")
                     await self.hide_stream_widget()
                     await asyncio.sleep(1)
         except asyncio.CancelledError:
-            print("Update texture task cancelled")
+            _log.info("Update texture task cancelled")
 
     async def show_stream_widget(self):
         if self.image not in self.center_column.children:
@@ -142,7 +150,7 @@ class StreamApp(MDApp):
 
     async def on_shot_button(self):
         filename = await get_out_filename()
-        if self.rtsp.status == 'working':
+        if self.rtsp.status == RTSPClient.Status.Running:
             filename = await self.rtsp.shot(filename)
             await file_toast(f"Photo saved to\n{filename}", filename)
 
@@ -169,23 +177,23 @@ class StreamApp(MDApp):
         else:
             await self.on_record_stop()
 
-    def on_stop(self):
-        asyncio.run(self.cleanup())
-
     async def cleanup(self):
         for task in self._tasks:
             task.cancel()
         try:
             await asyncio.gather(*self._tasks, return_exceptions=True)
         except asyncio.CancelledError:
-            print("App tasks cancelled")
+            _log.info("App tasks cancelled")
         finally:
             await self.rtsp.stop()
-            print("All tasks finalized and resources cleaned up")
+            _log.info("All tasks finalized and resources cleaned up")
+
+    def on_stop(self):
+        asyncio.create_task(self.cleanup())
 
 
 async def main():
-    app = StreamApp()
+    app = ArcherLink()
     await app.async_run()
 
 
@@ -193,6 +201,6 @@ if __name__ == '__main__':
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("Application interrupted")
+        _log.info("Application interrupted")
     finally:
-        print("Application exit cleanup")
+        _log.info("Application exit cleanup")

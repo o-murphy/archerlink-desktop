@@ -34,6 +34,7 @@ class RTSPClient:
         self.__frame = None
         self.__status = RTSPClient.Status.Stopped
         self._stop_event = asyncio.Event()
+        self._executor = None
 
     @property
     def frame(self):
@@ -117,8 +118,8 @@ class RTSPClient:
                         frame = await self.__player.video.recv()
                         if frame:
                             self.__status = RTSPClient.Status.Running
-                            frame = frame.to_ndarray(format="bgr24")
-                            self.__frame = cv2.flip(frame, 0)
+                            self.__frame = frame.to_ndarray(format="bgr24")
+                            # self.__frame = cv2.flip(frame, 0)
                             # cv2.imshow("RTSP Stream", self.__frame)
                             # if cv2.waitKey(1) & 0xFF == ord('q'):
                             #     break
@@ -149,14 +150,16 @@ class RTSPClient:
         asyncio.run(self.run_async())
 
     async def stop(self):
+        _log.info("RTSP client stop event set: True")
         self._stop_event.set()
         await self._close()
+        if self._executor:
+            self._executor.shutdown(wait=True)
 
     async def run_in_executor(self):
         loop = asyncio.get_running_loop()
-        with ThreadPoolExecutor() as executor:
-            await loop.run_in_executor(executor, asyncio.run, self.run_async())
-
+        self._executor = ThreadPoolExecutor()
+        await loop.run_in_executor(self._executor, self._run_async_in_thread)
 
     @staticmethod
     async def resize_frame(frame, width, height):
@@ -195,7 +198,7 @@ def init_socket(host, port):
     # Send the command to start streaming
     init_command = "CMD_RTSP_TRANS_START"
     init_response = send_command_receive_response(init_command, soc)
-    print(init_response)
+    _log.info(f"Response: {init_response}")
     if "CMD_ACK_START_RTSP_LIVE" in init_response:
         return soc
     raise Exception("Soc err")
@@ -218,7 +221,7 @@ def ping(host):
 
 async def main():
     rtsp_stream = RTSPClient('192.168.100.1', 8888, 'rtsp://192.168.100.1/stream0', {
-    # rtsp_stream = RTSPClient(None, None, 'rtsp://127.0.0.1:8554/test', {
+        # rtsp_stream = RTSPClient(None, None, 'rtsp://127.0.0.1:8554/test', {
         'rtsp_transport': 'udp',  # Use UDP transport for lower latency
         'fflags': 'nobuffer',
         'max_delay': '500000',  # 500ms max delay
