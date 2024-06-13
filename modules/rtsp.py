@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 import socket
 import subprocess
 import sys
@@ -11,10 +10,14 @@ import av
 import cv2
 from aiortc.contrib.media import MediaPlayer
 from aiortc.mediastreams import MediaStreamError
+from win32process import CREATE_NO_WINDOW
 
 logging.basicConfig(level=logging.DEBUG)
 _log = logging.getLogger('RTSP')
 _log.setLevel(logging.DEBUG)
+
+# si = subprocess.STARTUPINFO()
+# si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
 
 class RTSPClient:
@@ -215,10 +218,10 @@ def ping(host):
     # Building the command. Ex: "ping -c 1 google.com"
     command = ['ping', param, '1', host]
     # Redirect output and error streams to DEVNULL to suppress them
-    # with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as process:
-    #     stdout, stderr = process.communicate()
-    #     return process.returncode == 0
-    return os.system(" ".join(command)) == 0
+    with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=CREATE_NO_WINDOW) as process:
+        stdout, stderr = process.communicate()
+        return process.returncode == 0
+    # return os.system(" ".join(command)) == 0
 
 
 async def main():
