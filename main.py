@@ -1,10 +1,11 @@
-# import faulthandler
-#
-# faulthandler.enable()
-
 import asyncio
+import logging
 
 import cv2
+
+from modules.env import *
+
+assert KVGUI_PATH
 from kivy.core.window import Window
 from kivy.graphics.texture import Texture
 from kivy.lang import Builder
@@ -12,25 +13,14 @@ from kivy.uix.image import Image
 from kivy.uix.screenmanager import Screen
 from kivymd.app import MDApp
 
-
-import logging
-
 from modules import MovRecorder, RTSPClient, file_toast
 from modules.control import websocket
-from modules.env import *
 
 _log = logging.getLogger("ArcherLink")
 _log.setLevel(logging.DEBUG)
 
 Builder.load_file(KVGUI_PATH)
 websocket.set_uri(WS_URI)
-
-
-# def get_memory_usage():
-#     process = psutil.Process(os.getpid())
-#     mem_info = process.memory_info()
-#     mem_usage_mb = mem_info.rss / 1024 / 1024  # Convert from bytes to MB
-#     print(f"Current memory usage: {mem_usage_mb:.2f} MB")
 
 
 class MainScreen(Screen):
@@ -106,7 +96,8 @@ class ArcherLink(MDApp):
                             # print("Frame resized")
                             buf = resized_frame.tobytes()
                             # print("Frame converted to bytes")
-                            texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='bgr')
+                            texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]),
+                                                     colorfmt='bgr')
                             texture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
                             self.image.texture = texture
                             # print("Texture updated")
@@ -126,13 +117,13 @@ class ArcherLink(MDApp):
         if self.image not in self.center_column.children:
             self.center_column.remove_widget(self.placeholder)
             self.center_column.add_widget(self.image)
-        await asyncio.sleep(0)
+        # await asyncio.sleep(0)
 
     async def hide_stream_widget(self):
         if self.image in self.center_column.children:
             self.center_column.remove_widget(self.image)
             self.center_column.add_widget(self.placeholder)
-        await asyncio.sleep(0)
+        # await asyncio.sleep(0)
 
     async def spinn_message(self, msg):
         async def spinner():
@@ -156,20 +147,21 @@ class ArcherLink(MDApp):
 
     async def on_rec_stop(self):
         button = self.root.ids.rec_btn
-        icon = self.root.ids.rec_btn_icon
-        button.color_map = "surface"
-        icon.text_color = self.theme_cls.primaryColor
-
-        # if self.recorder.s
+        button.text_color = self.theme_cls.primaryColor
+        button.md_bg_color = self.theme_cls.surfaceContainerColor
         filename, err = await self.recorder.stop_recording()
-        if not err:
-            await file_toast(f"Video saved to\n{self.recorder.filename}", self.recorder.filename)
+        if filename:
+            msg = f"Video saved to\n{self.recorder.filename}"
+            if not err:
+                await file_toast(msg, self.recorder.filename)
+            else:
+                await file_toast(
+                    f"RECORDING ERROR!\n" + msg, self.recorder.filename, not not err)
 
     async def on_rec_start(self):
         button = self.root.ids.rec_btn
-        icon = self.root.ids.rec_btn_icon
-        button.color_map = "tertiary"
-        icon.text_color = self.theme_cls.onErrorColor
+        button.text_color = self.theme_cls.errorContainerColor
+        button.md_bg_color = self.theme_cls.onErrorContainerColor
         filename = await get_output_filename()
         _log.info("Starting recording")
         await self.recorder.start_async_recording(filename)
@@ -181,6 +173,7 @@ class ArcherLink(MDApp):
             await self.on_rec_stop()
 
     async def cleanup(self):
+        # await self.on_rec_stop()
         for task in self._tasks:
             task.cancel()
         try:

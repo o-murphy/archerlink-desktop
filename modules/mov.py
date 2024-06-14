@@ -1,10 +1,11 @@
-import av
 import asyncio
-import cv2
 import logging
+
+import av
 
 _log = logging.getLogger('Recorder')
 _log.setLevel(logging.DEBUG)
+
 
 class MovRecorder:
     def __init__(self, rtsp, on_error):

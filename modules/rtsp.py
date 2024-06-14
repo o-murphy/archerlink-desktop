@@ -16,9 +16,6 @@ logging.basicConfig(level=logging.DEBUG)
 _log = logging.getLogger('RTSP')
 _log.setLevel(logging.DEBUG)
 
-# si = subprocess.STARTUPINFO()
-# si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-
 
 class RTSPClient:
     class Status(Enum):
@@ -83,14 +80,11 @@ class RTSPClient:
                                             format='rtsp',
                                             options=self.options,
                                             timeout=2)
+                await asyncio.sleep(1)
                 await self._get_stream_fps()
                 break
-            except TimeoutError as e:
-                _log.error(e)
-            except ConnectionError as e:
-                _log.error(f"Failed to connect: {e}")
-            except av.AVError as e:
-                _log.error(f"Failed to connect: AVError: {e}")
+            except (TimeoutError, ConnectionError, av.AVError) as e:
+                _log.error(f"Failed to connect: {e.__class__.__name__}: {e}")
             finally:
                 await asyncio.sleep(1)
 
@@ -98,11 +92,11 @@ class RTSPClient:
         if self.__player:
             self.__player.video.stop()
             self.__player = None
+        self.__status = RTSPClient.Status.Stopped
         self.__frame = None
         if self.__socket is not None:
             self.__socket.close()
             self.__socket = None
-        self.__status = RTSPClient.Status.Stopped
 
     async def _reconnect(self):
         if self.__player is None:
@@ -126,7 +120,7 @@ class RTSPClient:
                         else:
                             _log.warning("No frame received")
                             self.__frame = None
-                        await asyncio.sleep(0)  # Allow other tasks to run without delay
+                        await asyncio.sleep(1 / (self.fps * 2))  # Allow other tasks to run without delay
                         continue
                     else:
                         raise ConnectionError("No player connected")
@@ -211,7 +205,8 @@ def ping(host):
     # Building the command. Ex: "ping -c 1 google.com"
     command = ['ping', param, '1', host]
     # Redirect output and error streams to DEVNULL to suppress them
-    with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=CREATE_NO_WINDOW) as process:
+    with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                          creationflags=CREATE_NO_WINDOW) as process:
         stdout, stderr = process.communicate()
         return process.returncode == 0
     # return os.system(" ".join(command)) == 0

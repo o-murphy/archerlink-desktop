@@ -53,8 +53,8 @@ SERVER = cfg['debug-server' if DEBUG else 'server']
 TCP_IP = SERVER['TCP_IP']
 TCP_PORT = SERVER['TCP_PORT']
 WS_PORT = SERVER['WS_PORT']
-WS_URI = SERVER['WS_URI'].format(TCP_IP=TCP_IP, WS_PORT=WS_PORT)
-RTSP_URI = SERVER['RTSP_URI'].format(TCP_IP=TCP_IP)
+WS_URI = SERVER['WS_URI']
+RTSP_URI = SERVER['RTSP_URI']
 AV_OPTIONS = cfg['av-options']
 
 if DEBUG:
@@ -87,6 +87,13 @@ async def open_file_path(filepath):
     else:
         # On Linux, there is no standard way to highlight a file, just open the directory
         subprocess.Popen(['xdg-open', filepath])
+
+
+# def get_memory_usage():
+#     process = psutil.Process(os.getpid())
+#     mem_info = process.memory_info()
+#     mem_usage_mb = mem_info.rss / 1024 / 1024  # Convert from bytes to MB
+#     print(f"Current memory usage: {mem_usage_mb:.2f} MB")
 
 
 __all__ = (
