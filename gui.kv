@@ -11,55 +11,34 @@
             orientation: 'vertical'
             size_hint_y: None
             size_hint_x: None
-#            width: '80dp'
             height: self.minimum_height
             padding: [0, 0]
             spacing: 10
             pos_hint: {"center_x": .5, "center_y": .5}
 
-            MDExtendedFabButton:
+            MDFabButton:
                 id: folder_btn
-                fab_state: "collapse"
+                icon: "folder"
+                style: "standard"
+                theme_bg_color: "Custom"
+                md_bg_color: "brown"
                 pos_hint: {"center_x": .5, "center_y": .5}
 
-                MDExtendedFabButtonIcon:
-                    icon: "folder"
-
-                MDExtendedFabButtonText:
-                    text: "Files"
-
-            MDExtendedFabButton:
+            MDFabButton:
                 id: shot_btn
-                fab_state: "collapse"
+                icon: "camera"
+                style: "standard"
+                theme_bg_color: "Custom"
+                md_bg_color: "brown"
                 pos_hint: {"center_x": .5, "center_y": .5}
-#                size_hint_x: 0.75
 
-                MDExtendedFabButtonIcon:
-                    icon: "camera"
-
-                MDExtendedFabButtonText:
-                    text: "Shot"
-
-            MDExtendedFabButton:
+            MDFabButton:
                 id: rec_btn
-                fab_state: "collapse"
+                icon: "record"
+                style: "standard"
+                theme_bg_color: "Custom"
+                md_bg_color: "brown"
                 pos_hint: {"center_x": .5, "center_y": .5}
-
-                MDExtendedFabButtonIcon:
-                    id: rec_btn_icon
-                    icon: "record"
-
-                MDExtendedFabButtonText:
-                    text: "Record"
-
-#            MDLabel:
-#                id: framerate
-#                text: "SAMPLE"
-#                color: "white"
-#                halign: "center"
-#                valign: "center"
-##                pos_hint: {"center_x": .5, "center_y": .5}
-
 
         MDBoxLayout:
             id: center_column
@@ -78,7 +57,6 @@
             orientation: 'vertical'
             size_hint_y: None
             size_hint_x: None
-#            width: '80dp'
             height: self.minimum_height
             padding: [0, 0]
             spacing: 10
@@ -87,11 +65,9 @@
             MDExtendedFabButton:
                 id: color_btn
                 fab_state: "collapse"
+#                theme_bg_color: "Custom"
+                md_bg_color: "brown"
                 pos_hint: {"center_x": .5, "center_y": .5}
-#                size_hint_x: 0.75
-#                on_enter: self.fab_state = "expand"
-#                on_leave: self.fab_state = "collapse"
-
 
                 MDExtendedFabButtonIcon:
                     icon: "palette"
@@ -99,44 +75,29 @@
                 MDExtendedFabButtonText:
                     text: "Color mode"
 
-            MDExtendedFabButton:
+            MDFabButton:
                 id: agc_btn
-                fab_state: "collapse"
+                icon: "image"
+                style: "standard"
+                elevation: dp(5)
+                theme_bg_color: "Custom"
+#                md_bg_color: self.theme_cls.secondaryContainerColor
+#                md_bg_color: self.theme_cls.onSecondaryColor
+                md_bg_color: self.theme_cls.surfaceDimColor
                 pos_hint: {"center_x": .5, "center_y": .5}
-#                size_hint_x: 0.75
-#                on_enter: self.fab_state = "expand"
-#                on_leave: self.fab_state = "collapse"
 
-                MDExtendedFabButtonIcon:
-                    icon: "image"
-
-                MDExtendedFabButtonText:
-                    text: "AGC Mode"
-
-            MDExtendedFabButton:
+            MDFabButton:
                 id: zoom_btn
-                fab_state: "collapse"
+                icon: "loupe"
+                style: "standard"
+                theme_bg_color: "Custom"
+                md_bg_color: "brown"
                 pos_hint: {"center_x": .5, "center_y": .5}
-#                size_hint_x: 0.75
-#                on_enter: self.fab_state = "expand"
-#                on_leave: self.fab_state = "collapse"
 
-                MDExtendedFabButtonIcon:
-                    icon: "loupe"
-
-                MDExtendedFabButtonText:
-                    text: "Zoom"
-
-            MDExtendedFabButton:
+            MDFabButton:
                 id: ffc_btn
-                fab_state: "collapse"
+                icon: "camera-iris"
+                style: "standard"
+                theme_bg_color: "Custom"
+                md_bg_color: "brown"
                 pos_hint: {"center_x": .5, "center_y": .5}
-#                size_hint_x: 0.75
-#                on_enter: self.fab_state = "expand"
-#                on_leave: self.fab_state = "collapse"
-
-                MDExtendedFabButtonIcon:
-                    icon: "camera-iris"
-
-                MDExtendedFabButtonText:
-                    text: "Calibration"

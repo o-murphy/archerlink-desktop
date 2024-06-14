@@ -83,14 +83,11 @@ class RTSPClient:
                                             format='rtsp',
                                             options=self.options,
                                             timeout=2)
+                await asyncio.sleep(1)
                 await self._get_stream_fps()
                 break
-            except TimeoutError as e:
-                _log.error(e)
-            except ConnectionError as e:
-                _log.error(f"Failed to connect: {e}")
-            except av.AVError as e:
-                _log.error(f"Failed to connect: AVError: {e}")
+            except (TimeoutError, ConnectionError, av.AVError) as e:
+                _log.error(f"Failed to connect: {e.__class__.__name__}: {e}")
             finally:
                 await asyncio.sleep(1)
 
@@ -98,11 +95,11 @@ class RTSPClient:
         if self.__player:
             self.__player.video.stop()
             self.__player = None
+        self.__status = RTSPClient.Status.Stopped
         self.__frame = None
         if self.__socket is not None:
             self.__socket.close()
             self.__socket = None
-        self.__status = RTSPClient.Status.Stopped
 
     async def _reconnect(self):
         if self.__player is None:
@@ -126,7 +123,7 @@ class RTSPClient:
                         else:
                             _log.warning("No frame received")
                             self.__frame = None
-                        await asyncio.sleep(0)  # Allow other tasks to run without delay
+                        await asyncio.sleep(1 / (self.fps * 2))  # Allow other tasks to run without delay
                         continue
                     else:
                         raise ConnectionError("No player connected")

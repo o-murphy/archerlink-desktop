@@ -71,6 +71,8 @@ class ArcherLink(MDApp):
         self.theme_cls.accent_palette = 'Teal'
         self.theme_cls.accent_hue = "800"
 
+        print(self.theme_cls.__dir__())
+
         Window.set_icon(ICO_PATH)
         Window.minimum_width = 700
         Window.minimum_height = 400
@@ -126,13 +128,13 @@ class ArcherLink(MDApp):
         if self.image not in self.center_column.children:
             self.center_column.remove_widget(self.placeholder)
             self.center_column.add_widget(self.image)
-        await asyncio.sleep(0)
+        # await asyncio.sleep(0)
 
     async def hide_stream_widget(self):
         if self.image in self.center_column.children:
             self.center_column.remove_widget(self.image)
             self.center_column.add_widget(self.placeholder)
-        await asyncio.sleep(0)
+        # await asyncio.sleep(0)
 
     async def spinn_message(self, msg):
         async def spinner():

@@ -17,7 +17,7 @@ WS_URI = 'ws://{TCP_IP}:{WS_PORT}/websocket'
 RTSP_URI = 'rtsp://{TCP_IP}/stream0'
 
 [av-options]
-rtsp_transport = "udp"  # Use UDP transport for lower latency
+rtsp_transport = "tcp"  # Use UDP transport for lower latency
 fflags = "nobuffer"
 max_delay = "500000"  # 500ms max delay
 tune = "zerolatency"
