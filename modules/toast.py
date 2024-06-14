@@ -11,9 +11,11 @@ MDApp.get_running_app()
 
 
 async def file_toast(text, path, err=False):
+    async def dismiss():
+        snackbar.dismiss()
 
     async def on_action():
-        snackbar.dismiss()
+        await dismiss()
         await open_file_path(path)
 
     app = MDApp.get_running_app()
@@ -23,7 +25,12 @@ async def file_toast(text, path, err=False):
         ),
         style="outlined"
     )
+    # close_button = MDSnackbarCloseButton(
+    #     icon="close",
+    # )
+
     action_button.bind(on_release=lambda x: asyncio.create_task(on_action()))
+    # close_button.bind(on_release=lambda x: asyncio.create_task(dismiss()))
 
     snackbar = MDSnackbar(
         MDSnackbarSupportingText(
@@ -37,6 +44,7 @@ async def file_toast(text, path, err=False):
             action_button,
             pos_hint={"center_y": 0.5}
         ),
+
         y=dp(24),
         orientation="horizontal",
         pos_hint={"center_x": 0.5},

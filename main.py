@@ -2,7 +2,9 @@ import asyncio
 import logging
 
 import cv2
+
 from modules.env import *
+
 assert KVGUI_PATH
 from kivy.core.window import Window
 from kivy.graphics.texture import Texture
@@ -13,7 +15,6 @@ from kivymd.app import MDApp
 
 from modules import MovRecorder, RTSPClient, file_toast
 from modules.control import websocket
-
 
 _log = logging.getLogger("ArcherLink")
 _log.setLevel(logging.DEBUG)
@@ -172,6 +173,7 @@ class ArcherLink(MDApp):
             await self.on_rec_stop()
 
     async def cleanup(self):
+        # await self.on_rec_stop()
         for task in self._tasks:
             task.cancel()
         try:
