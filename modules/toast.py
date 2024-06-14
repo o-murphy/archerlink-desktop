@@ -1,16 +1,13 @@
 import asyncio
 
 from kivy.metrics import dp
-from kivymd.app import MDApp
 from kivymd.uix.snackbar import (MDSnackbar, MDSnackbarSupportingText, MDSnackbarButtonContainer,
                                  MDSnackbarActionButton, MDSnackbarActionButtonText, MDSnackbarText)
 
-from modules.env import open_file_path
-
-MDApp.get_running_app()
+from env import open_file_path
 
 
-async def file_toast(text, path, err=False):
+async def file_toast(app, text, path, err=False):
     async def dismiss():
         snackbar.dismiss()
 
@@ -18,7 +15,6 @@ async def file_toast(text, path, err=False):
         await dismiss()
         await open_file_path(path)
 
-    app = MDApp.get_running_app()
     action_button = MDSnackbarActionButton(
         MDSnackbarActionButtonText(
             text="Open in files"

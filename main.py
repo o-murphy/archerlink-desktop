@@ -3,7 +3,7 @@ import logging
 
 import cv2
 
-from modules.env import *
+from env import *
 
 assert KVGUI_PATH
 from kivy.core.window import Window
@@ -13,8 +13,9 @@ from kivy.uix.image import Image
 from kivy.uix.screenmanager import Screen
 from kivymd.app import MDApp
 
-from modules import MovRecorder, RTSPClient, file_toast
+from modules import MovRecorder, RTSPClient
 from modules.control import websocket
+from modules.toast import file_toast
 
 _log = logging.getLogger("ArcherLink")
 _log.setLevel(logging.DEBUG)
@@ -143,7 +144,7 @@ class ArcherLink(MDApp):
         filename = await get_output_filename()
         if self.rtsp.status == RTSPClient.Status.Running:
             filename = await self.rtsp.shot(filename)
-            await file_toast(f"Photo saved to\n{filename}", filename)
+            await file_toast(self, f"Photo saved to\n{filename}", filename)
 
     async def on_rec_stop(self):
         button = self.root.ids.rec_btn
@@ -153,10 +154,10 @@ class ArcherLink(MDApp):
         if filename:
             msg = f"Video saved to\n{self.recorder.filename}"
             if not err:
-                await file_toast(msg, self.recorder.filename)
+                await file_toast(self, msg, self.recorder.filename)
             else:
-                await file_toast(
-                    f"RECORDING ERROR!\n" + msg, self.recorder.filename, not not err)
+                await file_toast(self,
+                                 f"RECORDING ERROR!\n" + msg, self.recorder.filename, not not err)
 
     async def on_rec_start(self):
         button = self.root.ids.rec_btn
