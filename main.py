@@ -8,6 +8,7 @@ import cv2
 from kivy.core.window import Window
 from kivy.graphics.texture import Texture
 from kivy.lang import Builder
+from kivy.metrics import dp
 from kivy.uix.image import Image
 from kivy.uix.screenmanager import Screen
 from kivymd.app import MDApp
@@ -15,7 +16,13 @@ from kivymd.app import MDApp
 
 import logging
 
-from modules import MovRecorder, RTSPClient, file_toast
+import asyncio
+from kivy.metrics import dp
+
+from kivymd.uix.snackbar import MDSnackbar, MDSnackbarSupportingText, MDSnackbarButtonContainer, \
+    MDSnackbarActionButton, MDSnackbarActionButtonText, MDSnackbarText
+
+from modules import MovRecorder, RTSPClient
 from modules.control import websocket
 from modules.env import *
 
@@ -70,8 +77,6 @@ class ArcherLink(MDApp):
         self.theme_cls.primary_hue = "600"
         self.theme_cls.accent_palette = 'Teal'
         self.theme_cls.accent_hue = "800"
-
-        print(self.theme_cls.__dir__())
 
         Window.set_icon(ICO_PATH)
         Window.minimum_width = 700
@@ -154,24 +159,25 @@ class ArcherLink(MDApp):
         filename = await get_output_filename()
         if self.rtsp.status == RTSPClient.Status.Running:
             filename = await self.rtsp.shot(filename)
-            await file_toast(f"Photo saved to\n{filename}", filename)
+            await self.file_toast(f"Photo saved to\n{filename}", filename)
 
     async def on_rec_stop(self):
         button = self.root.ids.rec_btn
-        icon = self.root.ids.rec_btn_icon
-        button.color_map = "surface"
-        icon.text_color = self.theme_cls.primaryColor
-
-        # if self.recorder.s
+        button.text_color = self.theme_cls.primaryColor
+        button.md_bg_color = self.theme_cls.surfaceContainerColor
         filename, err = await self.recorder.stop_recording()
-        if not err:
-            await file_toast(f"Video saved to\n{self.recorder.filename}", self.recorder.filename)
+        if filename:
+            msg = f"Video saved to\n{self.recorder.filename}"
+            if not err:
+                await self.file_toast(msg, self.recorder.filename)
+            else:
+                await self.file_toast(
+                    f"RECORDING ERROR!\n" + msg, self.recorder.filename, not not err)
 
     async def on_rec_start(self):
         button = self.root.ids.rec_btn
-        icon = self.root.ids.rec_btn_icon
-        button.color_map = "tertiary"
-        icon.text_color = self.theme_cls.onErrorColor
+        button.text_color = self.theme_cls.errorContainerColor
+        button.md_bg_color = self.theme_cls.onErrorContainerColor
         filename = await get_output_filename()
         _log.info("Starting recording")
         await self.recorder.start_async_recording(filename)
@@ -195,6 +201,48 @@ class ArcherLink(MDApp):
 
     def on_stop(self):
         asyncio.create_task(self.cleanup())
+
+    async def file_toast(self, text, path, err=False):
+        action_button = MDSnackbarActionButton(
+            MDSnackbarActionButtonText(
+                text="Open in files"
+            ),
+        )
+        action_button.bind(on_release=lambda x: asyncio.create_task(open_file_path(path)))
+
+        snackbar = MDSnackbar(
+            MDSnackbarSupportingText(
+                text=text,
+                **{
+                    "theme_text_color": "Custom",
+                    "text_color":  self.theme_cls.errorContainerColor,
+                } if err else {}
+            ),
+            MDSnackbarButtonContainer(
+                action_button,
+                pos_hint={"center_y": 0.5}
+            ),
+            y=dp(24),
+            orientation="horizontal",
+            pos_hint={"center_x": 0.5},
+            size_hint_x=0.5,
+            duration=3,
+
+            **{
+                "background_color": self.theme_cls.onErrorContainerColor
+            } if err else {},
+        )
+        snackbar.open()
+
+    async def toast(self, text):
+        MDSnackbar(
+            MDSnackbarText(
+                text=text,
+            ),
+            y=dp(24),
+            pos_hint={"center_x": 0.5},
+            size_hint_x=0.8,
+        ).open()
 
 
 async def main():

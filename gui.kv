@@ -21,7 +21,7 @@
                 icon: "folder"
                 style: "standard"
                 theme_bg_color: "Custom"
-                md_bg_color: "brown"
+                md_bg_color: self.theme_cls.surfaceContainerColor
                 pos_hint: {"center_x": .5, "center_y": .5}
 
             MDFabButton:
@@ -29,7 +29,7 @@
                 icon: "camera"
                 style: "standard"
                 theme_bg_color: "Custom"
-                md_bg_color: "brown"
+                md_bg_color: self.theme_cls.surfaceContainerColor
                 pos_hint: {"center_x": .5, "center_y": .5}
 
             MDFabButton:
@@ -37,7 +37,7 @@
                 icon: "record"
                 style: "standard"
                 theme_bg_color: "Custom"
-                md_bg_color: "brown"
+                md_bg_color: self.theme_cls.surfaceContainerColor
                 pos_hint: {"center_x": .5, "center_y": .5}
 
         MDBoxLayout:
@@ -62,24 +62,18 @@
             spacing: 10
             pos_hint: {"center_x": .5, "center_y": .5}
 
-            MDExtendedFabButton:
+            MDFabButton:
                 id: color_btn
-                fab_state: "collapse"
-#                theme_bg_color: "Custom"
-                md_bg_color: "brown"
+                icon: "palette"
+                style: "standard"
+                theme_bg_color: "Custom"
+                md_bg_color: self.theme_cls.surfaceContainerColor
                 pos_hint: {"center_x": .5, "center_y": .5}
-
-                MDExtendedFabButtonIcon:
-                    icon: "palette"
-
-                MDExtendedFabButtonText:
-                    text: "Color mode"
 
             MDFabButton:
                 id: agc_btn
                 icon: "image"
                 style: "standard"
-                elevation: dp(5)
                 theme_bg_color: "Custom"
                 md_bg_color: self.theme_cls.surfaceContainerColor
                 pos_hint: {"center_x": .5, "center_y": .5}
@@ -89,7 +83,7 @@
                 icon: "loupe"
                 style: "standard"
                 theme_bg_color: "Custom"
-                md_bg_color: "brown"
+                md_bg_color: self.theme_cls.surfaceContainerColor
                 pos_hint: {"center_x": .5, "center_y": .5}
 
             MDFabButton:
@@ -97,5 +91,5 @@
                 icon: "camera-iris"
                 style: "standard"
                 theme_bg_color: "Custom"
-                md_bg_color: "brown"
+                md_bg_color: self.theme_cls.surfaceContainerColor
                 pos_hint: {"center_x": .5, "center_y": .5}
