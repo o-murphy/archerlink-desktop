@@ -1,43 +1,25 @@
-# import faulthandler
-#
-# faulthandler.enable()
-
 import asyncio
+import logging
 
 import cv2
+from modules.env import *
+assert KVGUI_PATH
 from kivy.core.window import Window
 from kivy.graphics.texture import Texture
 from kivy.lang import Builder
-from kivy.metrics import dp
 from kivy.uix.image import Image
 from kivy.uix.screenmanager import Screen
 from kivymd.app import MDApp
 
-
-import logging
-
-import asyncio
-from kivy.metrics import dp
-
-from kivymd.uix.snackbar import MDSnackbar, MDSnackbarSupportingText, MDSnackbarButtonContainer, \
-    MDSnackbarActionButton, MDSnackbarActionButtonText, MDSnackbarText
-
-from modules import MovRecorder, RTSPClient
+from modules import MovRecorder, RTSPClient, file_toast
 from modules.control import websocket
-from modules.env import *
+
 
 _log = logging.getLogger("ArcherLink")
 _log.setLevel(logging.DEBUG)
 
 Builder.load_file(KVGUI_PATH)
 websocket.set_uri(WS_URI)
-
-
-# def get_memory_usage():
-#     process = psutil.Process(os.getpid())
-#     mem_info = process.memory_info()
-#     mem_usage_mb = mem_info.rss / 1024 / 1024  # Convert from bytes to MB
-#     print(f"Current memory usage: {mem_usage_mb:.2f} MB")
 
 
 class MainScreen(Screen):
@@ -113,7 +95,8 @@ class ArcherLink(MDApp):
                             # print("Frame resized")
                             buf = resized_frame.tobytes()
                             # print("Frame converted to bytes")
-                            texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]), colorfmt='bgr')
+                            texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]),
+                                                     colorfmt='bgr')
                             texture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
                             self.image.texture = texture
                             # print("Texture updated")
@@ -159,7 +142,7 @@ class ArcherLink(MDApp):
         filename = await get_output_filename()
         if self.rtsp.status == RTSPClient.Status.Running:
             filename = await self.rtsp.shot(filename)
-            await self.file_toast(f"Photo saved to\n{filename}", filename)
+            await file_toast(f"Photo saved to\n{filename}", filename)
 
     async def on_rec_stop(self):
         button = self.root.ids.rec_btn
@@ -169,9 +152,9 @@ class ArcherLink(MDApp):
         if filename:
             msg = f"Video saved to\n{self.recorder.filename}"
             if not err:
-                await self.file_toast(msg, self.recorder.filename)
+                await file_toast(msg, self.recorder.filename)
             else:
-                await self.file_toast(
+                await file_toast(
                     f"RECORDING ERROR!\n" + msg, self.recorder.filename, not not err)
 
     async def on_rec_start(self):
@@ -201,48 +184,6 @@ class ArcherLink(MDApp):
 
     def on_stop(self):
         asyncio.create_task(self.cleanup())
-
-    async def file_toast(self, text, path, err=False):
-        action_button = MDSnackbarActionButton(
-            MDSnackbarActionButtonText(
-                text="Open in files"
-            ),
-        )
-        action_button.bind(on_release=lambda x: asyncio.create_task(open_file_path(path)))
-
-        snackbar = MDSnackbar(
-            MDSnackbarSupportingText(
-                text=text,
-                **{
-                    "theme_text_color": "Custom",
-                    "text_color":  self.theme_cls.errorContainerColor,
-                } if err else {}
-            ),
-            MDSnackbarButtonContainer(
-                action_button,
-                pos_hint={"center_y": 0.5}
-            ),
-            y=dp(24),
-            orientation="horizontal",
-            pos_hint={"center_x": 0.5},
-            size_hint_x=0.5,
-            duration=3,
-
-            **{
-                "background_color": self.theme_cls.onErrorContainerColor
-            } if err else {},
-        )
-        snackbar.open()
-
-    async def toast(self, text):
-        MDSnackbar(
-            MDSnackbarText(
-                text=text,
-            ),
-            y=dp(24),
-            pos_hint={"center_x": 0.5},
-            size_hint_x=0.8,
-        ).open()
 
 
 async def main():
