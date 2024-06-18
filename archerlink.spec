@@ -27,8 +27,8 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=runtime_hooks(),
     excludes=[
-        'Pillow',
-        'PIL',
+        # 'Pillow',
+        # 'PIL',
         'setuptools',
         'wheel',
     ],

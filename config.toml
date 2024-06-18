@@ -4,10 +4,10 @@ DEBUG = false
 
 [debug-server]
 TCP_IP = "127.0.0.1"
-TCP_PORT = 8888
-WS_PORT = 8080
+TCP_PORT = 0
+WS_PORT = 0
 WS_URI = "ws://stream.trailcam.link:8080/websocket"
-RTSP_URI = "rtsp://127.0.0.1:8554/"
+RTSP_URI = "rtsp://127.0.0.1:8554/test"
 
 [server]
 TCP_IP = "192.168.100.1"
@@ -17,7 +17,7 @@ WS_URI = "ws://192.168.100.1:8080/websocket"
 RTSP_URI = "rtsp://192.168.100.1/stream0"
 
 [av-options]
-rtsp_transport = "tcp"  # Use UDP transport for lower latency
+rtsp_transport = "udp"  # Use UDP transport for lower latency
 fflags = "nobuffer"
 max_delay = "500000"  # 500ms max delay
 tune = "zerolatency"

@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 
 import av
-import cv2
+from PIL import Image
 from aiortc.contrib.media import MediaPlayer
 from aiortc.mediastreams import MediaStreamError
 from win32process import CREATE_NO_WINDOW
@@ -116,6 +116,7 @@ class RTSPClient:
                         frame = await self.__player.video.recv()
                         if frame:
                             self.__status = RTSPClient.Status.Running
+                            # frame_array = frame.to_ndarray(format="bgr24")
                             self.__frame = frame.to_ndarray(format="bgr24")
                         else:
                             _log.warning("No frame received")
@@ -154,8 +155,8 @@ class RTSPClient:
         await loop.run_in_executor(self._executor, self._run_async_in_thread)
 
     @staticmethod
-    async def resize_frame(frame, width, height):
-        frame_height, frame_width = frame.shape[:2]
+    async def resize_frame(frame: Image, width, height):
+        frame_width, frame_height = frame.size
         aspect_ratio = frame_width / frame_height
 
         if width / height > aspect_ratio:
@@ -165,13 +166,16 @@ class RTSPClient:
             new_width = int(width)
             new_height = int(width / aspect_ratio)
 
-        resized_frame = cv2.resize(frame, (new_width, new_height))
+        # resized_frame = frame.resize((new_width, new_height), Image.LANCZOS)
+        resized_frame = frame.resize((new_width, new_height), Image.BICUBIC)
+
         # await asyncio.sleep(0)
         return resized_frame
 
     async def shot(self, filename):
         if (frame := self.frame) is not None:
-            cv2.imwrite(filename + '.png', frame)
+            image = Image.fromarray(frame)
+            image.save(filename + '.png')
             return filename + '.png'
 
 

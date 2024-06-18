@@ -1,7 +1,8 @@
 import asyncio
 import logging
 
-import cv2
+import PIL.Image
+import numpy as np
 
 from env import *
 
@@ -92,12 +93,13 @@ class ArcherLink(MDApp):
                     if (frame := self.rtsp.frame) is not None:
                         # print("Processing frame")
                         try:
-                            frame = cv2.flip(frame, 0)
-                            resized_frame = await self.adjust_frame(frame)
+                            frame = PIL.Image.fromarray(frame)
+                            flipped_image = frame.transpose(PIL.Image.Transpose.FLIP_TOP_BOTTOM)
+                            resized_frame = await self.adjust_frame(flipped_image)
                             # print("Frame resized")
                             buf = resized_frame.tobytes()
                             # print("Frame converted to bytes")
-                            texture = Texture.create(size=(resized_frame.shape[1], resized_frame.shape[0]),
+                            texture = Texture.create(size=(resized_frame.size[0], resized_frame.size[1]),
                                                      colorfmt='bgr')
                             texture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
                             self.image.texture = texture
